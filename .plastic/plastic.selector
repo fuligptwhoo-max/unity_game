@@ -1,0 +1,4 @@
+repository "gammmme/gammmme 2025-10-05_15-40-27@10171537608498@cloud"
+  path "/"
+    br "/main"
+    co "/main"
