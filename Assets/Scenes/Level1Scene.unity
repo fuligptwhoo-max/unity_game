@@ -798,7 +798,7 @@ MonoBehaviour:
   pauseDialogueText: {fileID: 0}
   storySegments:
   - segmentName: intro
-    video: {fileID: 32900000, guid: 187b1311fba0dac4fb9d0a785cfc73d5, type: 3}
+    video: {fileID: 32900000, guid: 146e8c69e9795d44aad778482444aa2a, type: 3}
     audio: {fileID: 8300000, guid: 430e03e8dac6e3d4cb0eef8728020228, type: 3}
     autoContinue: 1
     isLooping: 0
@@ -814,7 +814,7 @@ MonoBehaviour:
     nextSegment: 1
     requiredFlag: 
   - segmentName: lobbi
-    video: {fileID: 32900000, guid: 72203e53df9b85c4f91425f30ab0cf67, type: 3}
+    video: {fileID: 32900000, guid: 9be92ec79cbad944381a6274e87b99dc, type: 3}
     audio: {fileID: 8300000, guid: 5ad1eaddb0c4f05468c43ad77e260fe3, type: 3}
     autoContinue: 0
     isLooping: 1
@@ -833,7 +833,7 @@ MonoBehaviour:
     nextSegment: -1
     requiredFlag: 
   - segmentName: 52dver
-    video: {fileID: 32900000, guid: 8604d05982e333a4caa786e238815dc9, type: 3}
+    video: {fileID: 32900000, guid: ba51dbf479ae69c4f9426efda7f9abdb, type: 3}
     audio: {fileID: 8300000, guid: 7d3146d94cb6a3c4baa8254e6a964d4e, type: 3}
     autoContinue: 1
     isLooping: 0
@@ -851,7 +851,7 @@ MonoBehaviour:
     nextSegment: 3
     requiredFlag: 
   - segmentName: lobbi2
-    video: {fileID: 32900000, guid: 4e34911edcedece4cb26fe0d0089678c, type: 3}
+    video: {fileID: 32900000, guid: ee044d93b9297a743a95a0ba3c95eb31, type: 3}
     audio: {fileID: 8300000, guid: f9818fefb1978b24d93e1fd4dde284ea, type: 3}
     autoContinue: 0
     isLooping: 1
@@ -873,8 +873,24 @@ MonoBehaviour:
     nextSegment: -1
     requiredFlag: 
   - segmentName: 52leave
-    video: {fileID: 32900000, guid: cf5376d033cddaa4ba31c54356cd8418, type: 3}
+    video: {fileID: 32900000, guid: 863f0d7c329ef534ab06dba3b85e9ea1, type: 3}
     audio: {fileID: 8300000, guid: ffe95c35e6fab884a8bb7aee39fc42cd, type: 3}
+    autoContinue: 1
+    isLooping: 0
+    showDialogue: 0
+    dialogueText: 
+    continueButtonText: 
+    showChoices: 0
+    choices: []
+    hasPause: 0
+    pauseTime: 0
+    pauseButtons: []
+    pauseDialogueText: 
+    nextSegment: 5
+    requiredFlag: 
+  - segmentName: scrimer
+    video: {fileID: 32900000, guid: 9da636844297b4f47b2c74713c3f91b9, type: 3}
+    audio: {fileID: 8300000, guid: 9161f12e4f3ffa648a459057b06b9d3a, type: 3}
     autoContinue: 1
     isLooping: 0
     showDialogue: 0
@@ -2026,6 +2042,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2651532394115469919, guid: 0faf91c629c46de4ea008d5f31e925a5, type: 3}
+      propertyPath: m_Name
+      value: ZvukVolumeSection
+      objectReference: {fileID: 0}
     - target: {fileID: 2833288231259319259, guid: 0faf91c629c46de4ea008d5f31e925a5, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -2181,6 +2201,10 @@ PrefabInstance:
     - target: {fileID: 7316347104601545611, guid: 0faf91c629c46de4ea008d5f31e925a5, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7851042157928315816, guid: 0faf91c629c46de4ea008d5f31e925a5, type: 3}
+      propertyPath: m_text
+      value: "\u0413\u0440\u043E\u043C\u043A\u043E\u0441\u0442\u044C \u0437\u0432\u0443\u043A\u0430"
       objectReference: {fileID: 0}
     - target: {fileID: 8426167374552056008, guid: 0faf91c629c46de4ea008d5f31e925a5, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target

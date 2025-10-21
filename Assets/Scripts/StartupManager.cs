@@ -8,7 +8,6 @@ public class StartupManager : MonoBehaviour
     public VideoPlayer menuBackgroundVideo;
     public GameObject titleScreen;
     public GameObject mainMenuUI;
-    public GameObject settingsButton;
 
     public AudioSource splashAudioSource;
     public AudioSource menuBackgroundAudioSource;
@@ -18,17 +17,37 @@ public class StartupManager : MonoBehaviour
 
     void Start()
     {
+        Debug.Log("=== STARTUP MANAGER START ===");
+        
+        // Создаем SettingsManager если его нет
+        if (SettingsManager.Instance == null)
+        {
+            Debug.Log("Creating SettingsManager instance");
+            GameObject settingsObj = new GameObject("SettingsManager");
+            settingsObj.AddComponent<SettingsManager>();
+            DontDestroyOnLoad(settingsObj);
+        }
+        else
+        {
+            Debug.Log("SettingsManager instance already exists");
+        }
+
+        // ... остальной код без изменений
         menuBackgroundVideo.gameObject.SetActive(true);
         menuBackgroundVideo.Prepare();
         
         if (titleScreen != null)
         {
             titleManager = titleScreen.GetComponent<TitleScreenManager>();
+            Debug.Log("TitleScreenManager found: " + (titleManager != null));
+        }
+        else
+        {
+            Debug.LogError("TitleScreen reference is null!");
         }
         
         titleScreen.SetActive(false);
         mainMenuUI.SetActive(false);
-        settingsButton.SetActive(false);
         
         splashVideoPlayer.gameObject.SetActive(true);
 
@@ -42,23 +61,29 @@ public class StartupManager : MonoBehaviour
 
     void OnSplashVideoFinished(VideoPlayer vp)
     {
+        Debug.Log("Splash video finished");
         isSplashFinished = true;
     }
 
     IEnumerator StartupRoutine()
     {
+        Debug.Log("Starting startup routine");
+        
         splashVideoPlayer.Prepare();
         yield return new WaitUntil(() => splashVideoPlayer.isPrepared);
         
         float videoDuration = (float)splashVideoPlayer.length;
+        Debug.Log("Splash video duration: " + videoDuration);
 
         if (splashAudioSource != null)
         {
             splashAudioSource.Play();
-            splashAudioSource.volume = PlayerPrefs.GetFloat("MasterVolume", 1f);
+            float masterVol = PlayerPrefs.GetFloat("MasterVolume", 0.75f);
+            splashAudioSource.volume = masterVol;
         }
 
         splashVideoPlayer.Play();
+        Debug.Log("Splash video started playing");
 
         // Ждем пока до конца видео останется 5 секунд
         if (videoDuration > 5f)
@@ -71,6 +96,7 @@ public class StartupManager : MonoBehaviour
 
         // Ждем окончания видео
         yield return new WaitUntil(() => isSplashFinished);
+        Debug.Log("Splash video completely finished");
 
         if (splashAudioSource != null)
             splashAudioSource.Stop();
@@ -81,6 +107,7 @@ public class StartupManager : MonoBehaviour
 
     IEnumerator ShowTitleText()
     {
+        Debug.Log("Showing title text");
         if (titleScreen != null && titleManager != null)
         {
             titleScreen.SetActive(true);
@@ -90,6 +117,8 @@ public class StartupManager : MonoBehaviour
 
     IEnumerator ShowPlayButton()
     {
+        Debug.Log("Showing play button");
+        
         // Включаем и запускаем фоновое видео меню
         menuBackgroundVideo.gameObject.SetActive(true);
         menuBackgroundVideo.Play();
@@ -98,7 +127,9 @@ public class StartupManager : MonoBehaviour
         if (menuBackgroundAudioSource != null)
         {
             menuBackgroundAudioSource.Play();
-            menuBackgroundAudioSource.volume = PlayerPrefs.GetFloat("MusicVolume", 1f) * PlayerPrefs.GetFloat("MasterVolume", 1f);
+            float masterVol = PlayerPrefs.GetFloat("MasterVolume", 0.75f);
+            float musicVol = PlayerPrefs.GetFloat("MusicVolume", 0.8f);
+            menuBackgroundAudioSource.volume = musicVol * masterVol;
         }
 
         // Выключаем сплеш-скрин
@@ -107,13 +138,15 @@ public class StartupManager : MonoBehaviour
         // Ждем 2 секунды перед показом кнопки
         yield return new WaitForSeconds(2f);
 
-        // Показываем кнопку "ИГРАТЬ"
+        // Показываем кнопку "ИГРАТЬ" (кнопка настроек появится ПОСЛЕ нажатия на "Играть")
         if (titleManager != null)
         {
             yield return StartCoroutine(titleManager.FadeInPlayButton());
         }
-        
-        settingsButton.SetActive(true);
+        else
+        {
+            Debug.LogError("TitleManager is null in ShowPlayButton!");
+        }
     }
 
     void OnDestroy()

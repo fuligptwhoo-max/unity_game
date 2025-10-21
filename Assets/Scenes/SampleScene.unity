@@ -715,17 +715,6 @@ CanvasGroup:
   m_CorrespondingSourceObject: {fileID: 5035413915871482398, guid: 0faf91c629c46de4ea008d5f31e925a5, type: 3}
   m_PrefabInstance: {fileID: 1824176229391229445}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &439895382 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 42904248942747218, guid: 0faf91c629c46de4ea008d5f31e925a5, type: 3}
-  m_PrefabInstance: {fileID: 1824176229391229445}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 439895378}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1053741938fb28649b57e9915939c26f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SettingsManager
 --- !u!1 &445338925
 GameObject:
   m_ObjectHideFlags: 0
@@ -1004,7 +993,7 @@ VideoPlayer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 490219675}
   m_Enabled: 1
-  m_VideoClip: {fileID: 32900000, guid: df0106eb0df1681449c5f32686bf7cc1, type: 3}
+  m_VideoClip: {fileID: 32900000, guid: 465dbadbd52196a48b08a69599c8606c, type: 3}
   m_TargetCameraAlpha: 1
   m_TargetCamera3DLayout: 0
   m_TargetCamera: {fileID: 519420031}
@@ -1791,9 +1780,9 @@ MonoBehaviour:
   musicVolumeText: {fileID: 222728259}
   sfxVolumeSlider: {fileID: 0}
   sfxVolumeText: {fileID: 0}
-  resolutionDropdown: {fileID: 1430522580}
-  displayModeDropdown: {fileID: 631441405}
-  refreshRateDropdown: {fileID: 919149772}
+  resolutionDropdown: {fileID: 0}
+  displayModeDropdown: {fileID: 0}
+  refreshRateDropdown: {fileID: 0}
   mainMenuButton: {fileID: 0}
   closeButton: {fileID: 0}
 --- !u!1 &708610264
@@ -2075,7 +2064,7 @@ VideoPlayer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 870378059}
   m_Enabled: 1
-  m_VideoClip: {fileID: 32900000, guid: e613cb3372a12d64fbb4b2a935abd0d2, type: 3}
+  m_VideoClip: {fileID: 32900000, guid: d0e3ca28ef4d1554db084342e1151749, type: 3}
   m_TargetCameraAlpha: 1
   m_TargetCamera3DLayout: 0
   m_TargetCamera: {fileID: 519420031}
@@ -2559,6 +2548,7 @@ MonoBehaviour:
   playButtonCanvasGroup: {fileID: 1384261597}
   mainMenuUI: {fileID: 445338925}
   mainMenuCanvasGroup: {fileID: 445338928}
+  settingsButton: {fileID: 7444089260209057425}
   titleFadeInDuration: 2
   buttonFadeInDuration: 0.5
   titleMoveDuration: 1
@@ -3587,7 +3577,6 @@ MonoBehaviour:
   menuBackgroundVideo: {fileID: 870378063}
   titleScreen: {fileID: 1005725576}
   mainMenuUI: {fileID: 445338925}
-  settingsButton: {fileID: 1056318638}
   splashAudioSource: {fileID: 490219680}
   menuBackgroundAudioSource: {fileID: 870378064}
 --- !u!224 &1790740235 stripped
@@ -4605,6 +4594,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2651532394115469919, guid: 0faf91c629c46de4ea008d5f31e925a5, type: 3}
+      propertyPath: m_Name
+      value: ZvukVolumeSection
+      objectReference: {fileID: 0}
     - target: {fileID: 2833288231259319259, guid: 0faf91c629c46de4ea008d5f31e925a5, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -4624,6 +4617,10 @@ PrefabInstance:
     - target: {fileID: 3645703551959296037, guid: 0faf91c629c46de4ea008d5f31e925a5, type: 3}
       propertyPath: m_Name
       value: SettingsPanel
+      objectReference: {fileID: 0}
+    - target: {fileID: 3645703551959296037, guid: 0faf91c629c46de4ea008d5f31e925a5, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3957765306731995012, guid: 0faf91c629c46de4ea008d5f31e925a5, type: 3}
       propertyPath: m_AnchorMax.y
@@ -4760,6 +4757,10 @@ PrefabInstance:
     - target: {fileID: 7316347104601545611, guid: 0faf91c629c46de4ea008d5f31e925a5, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7851042157928315816, guid: 0faf91c629c46de4ea008d5f31e925a5, type: 3}
+      propertyPath: m_text
+      value: "\u0413\u0440\u043E\u043C\u043A\u043E\u0441\u0442\u044C \u0437\u0432\u0443\u043A\u0430"
       objectReference: {fileID: 0}
     - target: {fileID: 8426167374552056008, guid: 0faf91c629c46de4ea008d5f31e925a5, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
@@ -5013,14 +5014,56 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8454176343128813579, guid: 205891fe591f1a1429b53b50f527407a, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.size
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8454176343128813579, guid: 205891fe591f1a1429b53b50f527407a, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
-      objectReference: {fileID: 439895382}
+      objectReference: {fileID: 0}
+    - target: {fileID: 8454176343128813579, guid: 205891fe591f1a1429b53b50f527407a, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 8454176343128813579, guid: 205891fe591f1a1429b53b50f527407a, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 8454176343128813579, guid: 205891fe591f1a1429b53b50f527407a, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: 
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1536665131089698542, guid: 205891fe591f1a1429b53b50f527407a, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7444089260209057428}
   m_SourcePrefab: {fileID: 100100000, guid: 205891fe591f1a1429b53b50f527407a, type: 3}
+--- !u!114 &7444089260209057425 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8454176343128813579, guid: 205891fe591f1a1429b53b50f527407a, type: 3}
+  m_PrefabInstance: {fileID: 7444089260209057424}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1056318638}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
+--- !u!225 &7444089260209057428
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1056318638}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
