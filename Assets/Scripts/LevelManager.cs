@@ -97,7 +97,7 @@ public class LevelManager : MonoBehaviour
     {
         Debug.Log("LevelManager: Initializing with dual VideoPlayer system");
         InitializeLevel();
-        
+
         List<VideoClip> videosToPreload = new List<VideoClip>();
         foreach (var segment in storySegments)
         {
@@ -107,9 +107,9 @@ public class LevelManager : MonoBehaviour
                 Debug.Log($"Added video to preload: {segment.video.name}");
             }
         }
-        
+
         Debug.Log($"Total videos to preload: {videosToPreload.Count}");
-        
+
         if (loadingScreen != null)
         {
             Debug.Log("Calling LoadingScreenManager.ShowLoadingScreen");
@@ -119,6 +119,50 @@ public class LevelManager : MonoBehaviour
         {
             Debug.LogError("LoadingScreenManager reference is NULL! Starting level immediately.");
             StartLevelAfterLoading();
+        }
+
+        ApplyVolumeSettings();
+
+    }
+    
+    private void ApplyVolumeSettings()
+    {
+        SettingsManager settingsManager = FindAnyObjectByType<SettingsManager>();
+        if (settingsManager != null)
+        {
+            // Вызываем обновление громкости видео-плееров
+            System.Reflection.MethodInfo method = typeof(SettingsManager).GetMethod("UpdateSFXVolume", 
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if (method != null)
+            {
+                method.Invoke(settingsManager, null);
+            }
+        }
+        else
+        {
+            Debug.LogWarning("SettingsManager not found in Level1Scene, applying volume manually");
+            
+            // Применяем громкость вручную если SettingsManager не найден
+            float masterVol = PlayerPrefs.GetFloat("MasterVolume", 1f);
+            float sfxVol = PlayerPrefs.GetFloat("SFXVolume", 1f);
+            float finalVolume = sfxVol * masterVol;
+            
+            SetVideoPlayerVolume(primaryVideoPlayer, finalVolume);
+            SetVideoPlayerVolume(secondaryVideoPlayer, finalVolume);
+            
+            Debug.Log("Applied volume settings manually: " + finalVolume);
+        }
+    }
+
+    // Вспомогательный метод для установки громкости VideoPlayer
+    private void SetVideoPlayerVolume(VideoPlayer videoPlayer, float volume)
+    {
+        if (videoPlayer != null)
+        {
+            for (ushort i = 0; i < videoPlayer.audioTrackCount; i++)
+            {
+                videoPlayer.SetDirectAudioVolume(i, volume);
+            }
         }
     }
     

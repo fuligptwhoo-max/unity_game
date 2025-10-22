@@ -28,11 +28,21 @@ public class LevelSelectionManager : MonoBehaviour
     private VideoPlayer videoPlayer;
     private RenderTexture renderTexture;
     
+    // Статическая переменная для отслеживания перехода из настроек
+    public static bool comingFromSettings = false;
+    
     void Start()
     {
         InitializeComponents();
         CreateLevelItems();
         SetPreviewVisible(false);
+        
+        // Если пришли из настроек, автоматически выбираем первый уровень
+        if (comingFromSettings && levels.Count > 0)
+        {
+            comingFromSettings = false;
+            SelectLevel(0);
+        }
     }
     
     void InitializeComponents()
@@ -84,9 +94,6 @@ public class LevelSelectionManager : MonoBehaviour
         {
             Debug.LogWarning($"Not enough level items! Found {existingItems.Length}, but need {levels.Count}");
         }
-        
-        // УБРАЛИ автоматический выбор первого уровня
-        // Уровни теперь не выбраны по умолчанию
     }
     
     public void SelectLevel(int levelIndex)

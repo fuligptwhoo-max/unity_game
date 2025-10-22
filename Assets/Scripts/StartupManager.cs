@@ -8,6 +8,7 @@ public class StartupManager : MonoBehaviour
     public VideoPlayer menuBackgroundVideo;
     public GameObject titleScreen;
     public GameObject mainMenuUI;
+    public GameObject settingsButton;
 
     public AudioSource splashAudioSource;
     public AudioSource menuBackgroundAudioSource;
@@ -17,37 +18,17 @@ public class StartupManager : MonoBehaviour
 
     void Start()
     {
-        Debug.Log("=== STARTUP MANAGER START ===");
-        
-        // Создаем SettingsManager если его нет
-        if (SettingsManager.Instance == null)
-        {
-            Debug.Log("Creating SettingsManager instance");
-            GameObject settingsObj = new GameObject("SettingsManager");
-            settingsObj.AddComponent<SettingsManager>();
-            DontDestroyOnLoad(settingsObj);
-        }
-        else
-        {
-            Debug.Log("SettingsManager instance already exists");
-        }
-
-        // ... остальной код без изменений
         menuBackgroundVideo.gameObject.SetActive(true);
         menuBackgroundVideo.Prepare();
         
         if (titleScreen != null)
         {
             titleManager = titleScreen.GetComponent<TitleScreenManager>();
-            Debug.Log("TitleScreenManager found: " + (titleManager != null));
-        }
-        else
-        {
-            Debug.LogError("TitleScreen reference is null!");
         }
         
         titleScreen.SetActive(false);
         mainMenuUI.SetActive(false);
+        settingsButton.SetActive(false);
         
         splashVideoPlayer.gameObject.SetActive(true);
 
@@ -56,34 +37,37 @@ public class StartupManager : MonoBehaviour
 
         splashVideoPlayer.loopPointReached += OnSplashVideoFinished;
 
-        StartCoroutine(StartupRoutine());
+        // Проверяем, нужно ли пропускать начальное видео (если пришли из настроек уровня)
+        if (LevelSelectionManager.comingFromSettings)
+        {
+            LevelSelectionManager.comingFromSettings = false;
+            StartCoroutine(SkipSplashAndShowMainMenu());
+        }
+        else
+        {
+            StartCoroutine(StartupRoutine());
+        }
     }
 
     void OnSplashVideoFinished(VideoPlayer vp)
     {
-        Debug.Log("Splash video finished");
         isSplashFinished = true;
     }
 
     IEnumerator StartupRoutine()
     {
-        Debug.Log("Starting startup routine");
-        
         splashVideoPlayer.Prepare();
         yield return new WaitUntil(() => splashVideoPlayer.isPrepared);
         
         float videoDuration = (float)splashVideoPlayer.length;
-        Debug.Log("Splash video duration: " + videoDuration);
 
         if (splashAudioSource != null)
         {
             splashAudioSource.Play();
-            float masterVol = PlayerPrefs.GetFloat("MasterVolume", 0.75f);
-            splashAudioSource.volume = masterVol;
+            splashAudioSource.volume = PlayerPrefs.GetFloat("MasterVolume", 1f);
         }
 
         splashVideoPlayer.Play();
-        Debug.Log("Splash video started playing");
 
         // Ждем пока до конца видео останется 5 секунд
         if (videoDuration > 5f)
@@ -96,7 +80,6 @@ public class StartupManager : MonoBehaviour
 
         // Ждем окончания видео
         yield return new WaitUntil(() => isSplashFinished);
-        Debug.Log("Splash video completely finished");
 
         if (splashAudioSource != null)
             splashAudioSource.Stop();
@@ -107,7 +90,6 @@ public class StartupManager : MonoBehaviour
 
     IEnumerator ShowTitleText()
     {
-        Debug.Log("Showing title text");
         if (titleScreen != null && titleManager != null)
         {
             titleScreen.SetActive(true);
@@ -117,8 +99,6 @@ public class StartupManager : MonoBehaviour
 
     IEnumerator ShowPlayButton()
     {
-        Debug.Log("Showing play button");
-        
         // Включаем и запускаем фоновое видео меню
         menuBackgroundVideo.gameObject.SetActive(true);
         menuBackgroundVideo.Play();
@@ -127,8 +107,8 @@ public class StartupManager : MonoBehaviour
         if (menuBackgroundAudioSource != null)
         {
             menuBackgroundAudioSource.Play();
-            float masterVol = PlayerPrefs.GetFloat("MasterVolume", 0.75f);
-            float musicVol = PlayerPrefs.GetFloat("MusicVolume", 0.8f);
+            float masterVol = PlayerPrefs.GetFloat("MasterVolume", 1f);
+            float musicVol = PlayerPrefs.GetFloat("MusicVolume", 1f);
             menuBackgroundAudioSource.volume = musicVol * masterVol;
         }
 
@@ -138,16 +118,100 @@ public class StartupManager : MonoBehaviour
         // Ждем 2 секунды перед показом кнопки
         yield return new WaitForSeconds(2f);
 
-        // Показываем кнопку "ИГРАТЬ" (кнопка настроек появится ПОСЛЕ нажатия на "Играть")
+        // Показываем кнопку "ИГРАТЬ"
         if (titleManager != null)
         {
             yield return StartCoroutine(titleManager.FadeInPlayButton());
         }
-        else
+        
+        settingsButton.SetActive(true);
+    }
+
+    IEnumerator SkipSplashAndShowMainMenu()
+    {
+        // Сразу скрываем сплеш и показываем главное меню
+        splashVideoPlayer.gameObject.SetActive(false);
+        
+        if (splashAudioSource != null)
+            splashAudioSource.Stop();
+
+        // Включаем и запускаем фоновое видео меню
+        menuBackgroundVideo.gameObject.SetActive(true);
+        menuBackgroundVideo.Play();
+        menuBackgroundVideo.isLooping = true;
+        
+        if (menuBackgroundAudioSource != null)
         {
-            Debug.LogError("TitleManager is null in ShowPlayButton!");
+            menuBackgroundAudioSource.Play();
+            float masterVol = PlayerPrefs.GetFloat("MasterVolume", 1f);
+            float musicVol = PlayerPrefs.GetFloat("MusicVolume", 1f);
+            menuBackgroundAudioSource.volume = musicVol * masterVol;
+        }
+
+    // Применяем сохраненные настройки дисплея
+    ApplySavedDisplaySettings();
+
+        // Применяем сохраненные настройки дисплея
+        ApplySavedDisplaySettings();
+
+        // Показываем главное меню сразу с правильной анимацией заголовка
+        titleScreen.SetActive(true);
+        
+        // Запускаем анимацию заголовка как после нажатия "Играть"
+        if (titleManager != null)
+        {
+            // Сразу устанавливаем заголовок в финальное положение
+            titleManager.titleText.anchoredPosition = titleManager.titleTargetPosition;
+            titleManager.titleText.localScale = titleManager.titleTargetScale;
+            titleManager.titleTextCanvasGroup.alpha = 1f;
+            
+            // Скрываем кнопку "Играть"
+            titleManager.playButtonCanvasGroup.alpha = 0f;
+            titleManager.playButton.interactable = false;
+            
+            // Показываем главное меню
+            titleManager.mainMenuUI.SetActive(true);
+            titleManager.mainMenuCanvasGroup.alpha = 1f;
+        }
+
+        mainMenuUI.SetActive(true);
+        settingsButton.SetActive(true);
+
+        yield return null;
+    }
+
+void ApplySavedDisplaySettings()
+{
+    // Если есть сохраненные настройки дисплея - применяем их
+    if (PlayerPrefs.HasKey("ResolutionWidth") && PlayerPrefs.HasKey("ResolutionHeight"))
+    {
+        int savedWidth = PlayerPrefs.GetInt("ResolutionWidth", Screen.currentResolution.width);
+        int savedHeight = PlayerPrefs.GetInt("ResolutionHeight", Screen.currentResolution.height);
+        int savedDisplayMode = PlayerPrefs.GetInt("DisplayMode", 1);
+        int savedRefreshRate = PlayerPrefs.GetInt("RefreshRate", 60);
+        
+        FullScreenMode mode = FullScreenMode.FullScreenWindow;
+        switch (savedDisplayMode)
+        {
+            case 0: mode = FullScreenMode.ExclusiveFullScreen; break;
+            case 1: mode = FullScreenMode.FullScreenWindow; break;
+            case 2: mode = FullScreenMode.Windowed; break;
+        }
+        
+        // Применяем сохраненные настройки
+        try
+        {
+            RefreshRate refreshRate = new RefreshRate { numerator = (uint)savedRefreshRate, denominator = 1 };
+            Screen.SetResolution(savedWidth, savedHeight, mode, refreshRate);
+            Debug.Log($"Applied saved display settings on startup: {savedWidth}x{savedHeight}, {mode}, {savedRefreshRate}Hz");
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"Failed to apply resolution on startup: {e.Message}");
+            Screen.SetResolution(savedWidth, savedHeight, mode);
         }
     }
+}
 
     void OnDestroy()
     {

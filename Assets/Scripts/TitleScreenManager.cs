@@ -13,85 +13,63 @@ public class TitleScreenManager : MonoBehaviour
     public CanvasGroup playButtonCanvasGroup;
     public GameObject mainMenuUI;
     public CanvasGroup mainMenuCanvasGroup;
-    public Button settingsButton;
 
     [Header("Настройки анимации")]
-    public float titleFadeInDuration = 5f;
-    public float buttonFadeInDuration = 2f;
+    public float titleFadeInDuration = 5f;    // Появление текста за 5 секунд
+    public float buttonFadeInDuration = 2f;   // Появление кнопки за 2 секунды
     public float titleMoveDuration = 2f;
     public float menuFadeDuration = 2f;
     public Vector2 titleTargetPosition = new Vector2(0, 350f);
     public Vector2 titleTargetScale = new Vector2(0.4f, 0.4f);
 
-    private Vector3 titleStartPosition;
-    private Vector3 titleStartScale;
+    [HideInInspector]
+    public Vector3 titleStartPosition;
+    [HideInInspector]
+    public Vector3 titleStartScale;
     private bool isTransitioning = false;
 
     void Start()
     {
-        Debug.Log("TitleScreenManager Start called");
-        
-        // Инициализация
-        titleStartPosition = new Vector2(0, 100f);
+        // Сохраняем начальные значения
+        titleStartPosition = new Vector3(0, 100f, 0);
         titleStartScale = Vector3.one;
 
-        titleText.anchoredPosition = titleStartPosition;
-        titleText.localScale = titleStartScale;
+        // Устанавливаем начальную позицию
+        if (titleText != null)
+        {
+            titleText.anchoredPosition = titleStartPosition;
+            titleText.localScale = titleStartScale;
+        }
 
-        // Настраиваем кнопки
-        playButton.onClick.AddListener(OnPlayButtonClicked);
+        // Настраиваем кнопку
+        if (playButton != null)
+            playButton.onClick.AddListener(OnPlayButtonClicked);
+
+        // Скрываем главное меню
+        if (mainMenuUI != null)
+            mainMenuUI.SetActive(false);
         
-        // Настраиваем кнопку настроек
-        if (settingsButton != null)
+        if (mainMenuCanvasGroup != null)
+            mainMenuCanvasGroup.alpha = 0f;
+
+        // Изначально скрываем текст и кнопку
+        if (titleTextCanvasGroup != null)
+            titleTextCanvasGroup.alpha = 0f;
+        
+        if (playButtonCanvasGroup != null)
         {
-            Debug.Log("Settings button found, setting up listener");
-            settingsButton.onClick.RemoveAllListeners();
-            settingsButton.onClick.AddListener(OnSettingsButtonClicked);
-            settingsButton.gameObject.SetActive(false); // Скрываем изначально
-        }
-        else
-        {
-            Debug.LogError("SettingsButton is NULL in TitleScreenManager!");
+            playButtonCanvasGroup.alpha = 0f;
+            playButton.interactable = false;
         }
 
-        // Скрываем UI элементы
-        mainMenuUI.SetActive(false);
-        mainMenuCanvasGroup.alpha = 0f;
-        titleTextCanvasGroup.alpha = 0f;
-        playButtonCanvasGroup.alpha = 0f;
-        playButton.interactable = false;
-
+        // Принудительное обновление
         Canvas.ForceUpdateCanvases();
-        Debug.Log("TitleScreenManager initialization complete");
-    }
-
-    public void OnSettingsButtonClicked()
-    {
-        Debug.Log("Settings button clicked!");
-        
-        // Используем FindAnyObjectByType вместо устаревшего FindObjectOfType
-        SettingsManager settingsManager = SettingsManager.Instance;
-        
-        if (settingsManager == null)
-        {
-            Debug.Log("SettingsManager.Instance is null, trying to find manually...");
-            settingsManager = FindAnyObjectByType<SettingsManager>();
-        }
-        
-        if (settingsManager != null)
-        {
-            Debug.Log("SettingsManager found, calling ToggleSettings");
-            settingsManager.ToggleSettings();
-        }
-        else
-        {
-            Debug.LogError("SettingsManager not found in scene!");
-        }
     }
 
     public IEnumerator FadeInTitleText()
     {
-        Debug.Log("Fading in title text");
+        if (titleTextCanvasGroup == null) yield break;
+        
         float time = 0;
         while (time < titleFadeInDuration)
         {
@@ -104,7 +82,8 @@ public class TitleScreenManager : MonoBehaviour
 
     public IEnumerator FadeInPlayButton()
     {
-        Debug.Log("Fading in play button");
+        if (playButtonCanvasGroup == null) yield break;
+        
         float time = 0;
         while (time < buttonFadeInDuration)
         {
@@ -113,14 +92,12 @@ public class TitleScreenManager : MonoBehaviour
             yield return null;
         }
         playButtonCanvasGroup.alpha = 1f;
-        playButton.interactable = true;
-        
-        Debug.Log("Play button faded in");
+        if (playButton != null)
+            playButton.interactable = true;
     }
 
     public void OnPlayButtonClicked()
     {
-        Debug.Log("Play button clicked");
         if (!isTransitioning)
         {
             StartCoroutine(AnimateTitleTransition());
@@ -130,38 +107,48 @@ public class TitleScreenManager : MonoBehaviour
     IEnumerator AnimateTitleTransition()
     {
         isTransitioning = true;
-        Debug.Log("Starting title transition animation");
         
-        // Сначала скрываем кнопки
-        yield return StartCoroutine(FadeOutButtons());
+        // Сначала плавно скрываем кнопку "Играть"
+        yield return StartCoroutine(FadeOutPlayButton());
 
-        // Анимация заголовка
+        // Анимация перемещения и уменьшения заголовка
         float time = 0;
         while (time < titleMoveDuration)
         {
             float t = time / titleMoveDuration;
-            titleText.anchoredPosition = Vector2.Lerp(titleStartPosition, titleTargetPosition, t);
-            titleText.localScale = Vector3.Lerp(titleStartScale, titleTargetScale, t);
+            
+            // Плавное перемещение вверх
+            if (titleText != null)
+            {
+                titleText.anchoredPosition = Vector2.Lerp(titleStartPosition, titleTargetPosition, t);
+                
+                // Плавное уменьшение
+                titleText.localScale = Vector3.Lerp(titleStartScale, titleTargetScale, t);
+            }
+
             time += Time.deltaTime;
             yield return null;
         }
 
-        titleText.anchoredPosition = titleTargetPosition;
-        titleText.localScale = titleTargetScale;
+        // Устанавливаем финальные значения
+        if (titleText != null)
+        {
+            titleText.anchoredPosition = titleTargetPosition;
+            titleText.localScale = titleTargetScale;
+        }
 
-        // Показываем главное меню (ВКЛЮЧАЯ КНОПКУ НАСТРОЕК)
+        // Показываем главное меню
         yield return StartCoroutine(ShowMainMenu());
         
         isTransitioning = false;
-        Debug.Log("Title transition animation complete");
     }
 
-    IEnumerator FadeOutButtons()
+    IEnumerator FadeOutPlayButton()
     {
+        if (playButtonCanvasGroup == null) yield break;
+        
         float time = 0;
         float fadeOutDuration = 1f;
-        
-        // Скрываем кнопку "Играть"
         while (time < fadeOutDuration)
         {
             playButtonCanvasGroup.alpha = Mathf.Lerp(1f, 0f, time / fadeOutDuration);
@@ -169,13 +156,17 @@ public class TitleScreenManager : MonoBehaviour
             yield return null;
         }
         playButtonCanvasGroup.alpha = 0f;
-        playButton.interactable = false;
+        if (playButton != null)
+            playButton.interactable = false;
     }
 
     IEnumerator ShowMainMenu()
     {
-        mainMenuUI.SetActive(true);
+        if (mainMenuUI != null)
+            mainMenuUI.SetActive(true);
 
+        if (mainMenuCanvasGroup == null) yield break;
+        
         float time = 0;
         while (time < menuFadeDuration)
         {
@@ -185,38 +176,5 @@ public class TitleScreenManager : MonoBehaviour
         }
 
         mainMenuCanvasGroup.alpha = 1f;
-        
-        // ВКЛЮЧАЕМ КНОПКУ НАСТРОЕК ПОСЛЕ ТОГО КАК ГЛАВНОЕ МЕНЮ ПОЯВИЛОСЬ
-        if (settingsButton != null)
-        {
-            Debug.Log("Activating settings button in main menu");
-            settingsButton.gameObject.SetActive(true);
-            
-            // Убедимся, что кнопка видима и интерактивна
-            CanvasGroup canvasGroup = settingsButton.GetComponent<CanvasGroup>();
-            if (canvasGroup != null)
-            {
-                canvasGroup.alpha = 1f;
-                canvasGroup.interactable = true;
-                canvasGroup.blocksRaycasts = true;
-            }
-            
-            // Принудительно обновляем кнопку
-            settingsButton.interactable = true;
-            
-            // Проверяем компоненты кнопки
-            Image buttonImage = settingsButton.GetComponent<Image>();
-            if (buttonImage != null) 
-            {
-                buttonImage.raycastTarget = true;
-                Debug.Log("Button image raycast target: " + buttonImage.raycastTarget);
-            }
-            
-            Debug.Log("Settings button should be visible and clickable now");
-        }
-        else
-        {
-            Debug.LogError("SettingsButton is null when trying to show it in main menu!");
-        }
     }
 }

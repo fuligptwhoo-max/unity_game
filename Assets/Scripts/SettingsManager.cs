@@ -8,8 +8,6 @@ using UnityEngine.SceneManagement;
 
 public class SettingsManager : MonoBehaviour
 {
-    public static SettingsManager Instance { get; private set; }
-
     [Header("Основные ссылки")]
     public GameObject settingsPanel;
     public CanvasGroup settingsCanvasGroup;
@@ -34,112 +32,96 @@ public class SettingsManager : MonoBehaviour
     [Header("Кнопки")]
     public Button mainMenuButton;
     public Button closeButton;
+    public Button applyButton;
     
     private Resolution[] resolutions;
     private List<Resolution> filteredResolutions = new List<Resolution>();
     private List<int> refreshRates = new List<int> { 60, 75, 120, 144, 165, 240 };
     private bool isInitialized = false;
     
+    // Текущие выбранные настройки
+    private int selectedResolutionIndex = 0;
+    private int selectedDisplayMode = 1;
+    private int selectedRefreshRate = 0;
+    
     // Ключи для PlayerPrefs
     private const string MASTER_VOLUME_KEY = "MasterVolume";
     private const string MUSIC_VOLUME_KEY = "MusicVolume";
     private const string SFX_VOLUME_KEY = "SFXVolume";
-    private const string RESOLUTION_INDEX_KEY = "ResolutionIndex";
+    private const string RESOLUTION_WIDTH_KEY = "ResolutionWidth";
+    private const string RESOLUTION_HEIGHT_KEY = "ResolutionHeight";
     private const string DISPLAY_MODE_KEY = "DisplayMode";
-    private const string REFRESH_RATE_KEY = "RefreshRateIndex";
-    
-    void Awake()
-    {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-            SceneManager.sceneLoaded += OnSceneLoaded;
-        }
-        else
-        {
-            Destroy(gameObject);
-            return;
-        }
-    }
+    private const string REFRESH_RATE_KEY = "RefreshRate";
     
     void Start()
     {
         InitializeSettings();
     }
     
-    void OnSceneLoaded(Scene scene, LoadSceneMode mode)
-    {
-        // Переинициализируем настройки при загрузке новой сцены
-        FindAudioSources();
-        FindLevelManager();
-        ApplyAllSettings();
-    }
-    
     void InitializeSettings()
     {
-        FindAudioSources();
-        FindLevelManager();
+        // Находим компоненты
+        if (backgroundAudio == null)
+        {
+            FindAudioSources();
+        }
         
-        if (settingsPanel != null)
-            settingsPanel.SetActive(false);
+        if (levelManager == null)
+        {
+            levelManager = FindAnyObjectByType<LevelManager>();
+        }
         
-        // Инициализация слайдеров
+        settingsPanel.SetActive(false);
+        
+        // Инициализация слайдеров звука
         if (masterVolumeSlider != null)
         {
-            masterVolumeSlider.onValueChanged.RemoveAllListeners();
             masterVolumeSlider.onValueChanged.AddListener(OnMasterVolumeChanged);
         }
-        
         if (musicVolumeSlider != null)
         {
-            musicVolumeSlider.onValueChanged.RemoveAllListeners();
             musicVolumeSlider.onValueChanged.AddListener(OnMusicVolumeChanged);
         }
-        
         if (sfxVolumeSlider != null)
         {
-            sfxVolumeSlider.onValueChanged.RemoveAllListeners();
             sfxVolumeSlider.onValueChanged.AddListener(OnSFXVolumeChanged);
         }
         
-        // Инициализация dropdown'ов
+        // Инициализация выпадающих списков
         if (resolutionDropdown != null)
         {
-            resolutionDropdown.onValueChanged.RemoveAllListeners();
             resolutionDropdown.onValueChanged.AddListener(OnResolutionChanged);
         }
-        
         if (displayModeDropdown != null)
         {
-            displayModeDropdown.onValueChanged.RemoveAllListeners();
             displayModeDropdown.onValueChanged.AddListener(OnDisplayModeChanged);
         }
-        
         if (refreshRateDropdown != null)
         {
-            refreshRateDropdown.onValueChanged.RemoveAllListeners();
             refreshRateDropdown.onValueChanged.AddListener(OnRefreshRateChanged);
         }
         
         // Инициализация кнопок
         if (mainMenuButton != null)
         {
-            mainMenuButton.onClick.RemoveAllListeners();
             mainMenuButton.onClick.AddListener(GoToMainMenu);
         }
         
         if (closeButton != null)
         {
-            closeButton.onClick.RemoveAllListeners();
             closeButton.onClick.AddListener(CloseSettings);
+        }
+        
+        if (applyButton != null)
+        {
+            applyButton.onClick.AddListener(ApplyDisplaySettings);
         }
         
         InitializeResolutionSettings();
         LoadSettings();
         isInitialized = true;
         
-        Debug.Log("SettingsManager initialized");
+        Debug.Log("SettingsManager initialized in " + SceneManager.GetActiveScene().name);
     }
     
     void Update()
@@ -152,34 +134,32 @@ public class SettingsManager : MonoBehaviour
     
     void FindAudioSources()
     {
-        if (backgroundAudio != null) return;
-        
-        // Ищем фоновую музыку
         AudioSource[] allAudioSources = FindObjectsByType<AudioSource>(FindObjectsSortMode.None);
         
         foreach (AudioSource audioSource in allAudioSources)
         {
+            // В Level1Scene ищем LevelBackgroundAudio или аналогичный
             if (audioSource.gameObject.CompareTag("BackgroundMusic") || 
                 audioSource.gameObject.name.Contains("Background") ||
-                audioSource.gameObject.name.Contains("Music"))
+                audioSource.gameObject.name.Contains("Music") ||
+                audioSource.gameObject.name.Contains("LevelBackground"))
             {
                 backgroundAudio = audioSource;
-                Debug.Log("Found background audio: " + audioSource.gameObject.name);
+                Debug.Log("Found background audio in " + SceneManager.GetActiveScene().name + ": " + audioSource.gameObject.name);
                 break;
             }
         }
-    }
-    
-    void FindLevelManager()
-    {
-        if (levelManager != null) return;
-        levelManager = FindAnyObjectByType<LevelManager>();
+        
+        // Если не нашли, используем первый доступный AudioSource
+        if (backgroundAudio == null && allAudioSources.Length > 0)
+        {
+            backgroundAudio = allAudioSources[0];
+            Debug.Log("Using first available audio source: " + backgroundAudio.gameObject.name);
+        }
     }
     
     void InitializeResolutionSettings()
     {
-        if (resolutionDropdown == null) return;
-        
         resolutions = Screen.resolutions;
         filteredResolutions.Clear();
         
@@ -192,49 +172,37 @@ public class SettingsManager : MonoBehaviour
             }
         }
         
-        resolutionDropdown.ClearOptions();
-        
-        List<string> options = new List<string>();
-        int currentResolutionIndex = 0;
-        
-        for (int i = 0; i < filteredResolutions.Count; i++)
+        if (resolutionDropdown != null)
         {
-            string option = filteredResolutions[i].width + " x " + filteredResolutions[i].height;
-            options.Add(option);
+            resolutionDropdown.ClearOptions();
             
-            if (filteredResolutions[i].width == Screen.currentResolution.width &&
-                filteredResolutions[i].height == Screen.currentResolution.height)
+            List<string> options = new List<string>();
+            int currentResolutionIndex = 0;
+            
+            for (int i = 0; i < filteredResolutions.Count; i++)
             {
-                currentResolutionIndex = i;
+                string option = filteredResolutions[i].width + " x " + filteredResolutions[i].height;
+                options.Add(option);
+                
+                if (filteredResolutions[i].width == Screen.currentResolution.width &&
+                    filteredResolutions[i].height == Screen.currentResolution.height)
+                {
+                    currentResolutionIndex = i;
+                }
             }
-        }
-        
-        resolutionDropdown.AddOptions(options);
-        
-        // Устанавливаем сохраненное значение или текущее
-        int savedResolution = PlayerPrefs.GetInt(RESOLUTION_INDEX_KEY, currentResolutionIndex);
-        if (savedResolution < resolutionDropdown.options.Count)
-        {
-            resolutionDropdown.value = savedResolution;
-        }
-        else
-        {
+            
+            resolutionDropdown.AddOptions(options);
             resolutionDropdown.value = currentResolutionIndex;
+            resolutionDropdown.RefreshShownValue();
         }
-        resolutionDropdown.RefreshShownValue();
         
         // Настройки режима отображения
         if (displayModeDropdown != null)
         {
             displayModeDropdown.ClearOptions();
-            displayModeDropdown.AddOptions(new List<string> { "Полноэкранный", "Оконный без рамки", "Оконный" });
-            
-            int savedDisplayMode = PlayerPrefs.GetInt(DISPLAY_MODE_KEY, 0);
-            if (savedDisplayMode < displayModeDropdown.options.Count)
-            {
-                displayModeDropdown.value = savedDisplayMode;
-            }
-            displayModeDropdown.RefreshShownValue();
+            List<string> displayOptions = new List<string> { "Полноэкранный", "Оконный без рамки", "Оконный" };
+            displayModeDropdown.AddOptions(displayOptions);
+            SetCurrentDisplayMode();
         }
         
         // Настройки частоты обновления
@@ -247,36 +215,59 @@ public class SettingsManager : MonoBehaviour
                 refreshOptions.Add(rate + " Hz");
             }
             refreshRateDropdown.AddOptions(refreshOptions);
-            
-            int savedRefreshRate = PlayerPrefs.GetInt(REFRESH_RATE_KEY, 0);
-            if (savedRefreshRate < refreshRateDropdown.options.Count)
-            {
-                refreshRateDropdown.value = savedRefreshRate;
-            }
-            refreshRateDropdown.RefreshShownValue();
+            SetCurrentRefreshRate();
         }
+    }
+    
+    void SetCurrentDisplayMode()
+    {
+        if (displayModeDropdown == null) return;
+        
+        switch (Screen.fullScreenMode)
+        {
+            case FullScreenMode.ExclusiveFullScreen:
+                displayModeDropdown.value = 0;
+                break;
+            case FullScreenMode.FullScreenWindow:
+                displayModeDropdown.value = 1;
+                break;
+            case FullScreenMode.Windowed:
+                displayModeDropdown.value = 2;
+                break;
+        }
+        displayModeDropdown.RefreshShownValue();
+    }
+    
+    void SetCurrentRefreshRate()
+    {
+        if (refreshRateDropdown == null) return;
+        
+        int currentRefreshRate = (int)Screen.currentResolution.refreshRateRatio.value;
+        int closestIndex = 0;
+        int minDifference = int.MaxValue;
+        
+        for (int i = 0; i < refreshRates.Count; i++)
+        {
+            int difference = Mathf.Abs(refreshRates[i] - currentRefreshRate);
+            if (difference < minDifference)
+            {
+                minDifference = difference;
+                closestIndex = i;
+            }
+        }
+        
+        refreshRateDropdown.value = closestIndex;
+        refreshRateDropdown.RefreshShownValue();
     }
     
     public void ToggleSettings()
     {
-        if (settingsPanel == null) 
-        {
-            Debug.LogError("SettingsPanel is null!");
-            return;
-        }
-        
-        Debug.Log("Toggling settings panel. Current active state: " + settingsPanel.activeSelf);
-        
         if (!settingsPanel.activeSelf)
         {
+            // При открытии настроек обновляем значения слайдеров
+            RefreshVolumeSliders();
             settingsPanel.SetActive(true);
-            if (settingsCanvasGroup != null)
-            {
-                settingsCanvasGroup.alpha = 1f;
-                settingsCanvasGroup.interactable = true;
-                settingsCanvasGroup.blocksRaycasts = true;
-            }
-            Debug.Log("Settings panel opened");
+            StartCoroutine(FadeInSettings());
         }
         else
         {
@@ -284,13 +275,40 @@ public class SettingsManager : MonoBehaviour
         }
     }
     
+    void RefreshVolumeSliders()
+    {
+        // Принудительно обновляем слайдеры текущими значениями из PlayerPrefs
+        float masterVol = PlayerPrefs.GetFloat(MASTER_VOLUME_KEY, 1f);
+        float musicVol = PlayerPrefs.GetFloat(MUSIC_VOLUME_KEY, 1f);
+        float sfxVol = PlayerPrefs.GetFloat(SFX_VOLUME_KEY, 1f);
+        
+        if (masterVolumeSlider != null)
+        {
+            masterVolumeSlider.SetValueWithoutNotify(masterVol);
+            if (masterVolumeText != null)
+                masterVolumeText.text = Mathf.RoundToInt(masterVol * 100) + "%";
+        }
+        
+        if (musicVolumeSlider != null)
+        {
+            musicVolumeSlider.SetValueWithoutNotify(musicVol);
+            if (musicVolumeText != null)
+                musicVolumeText.text = Mathf.RoundToInt(musicVol * 100) + "%";
+        }
+        
+        if (sfxVolumeSlider != null)
+        {
+            sfxVolumeSlider.SetValueWithoutNotify(sfxVol);
+            if (sfxVolumeText != null)
+                sfxVolumeText.text = Mathf.RoundToInt(sfxVol * 100) + "%";
+        }
+        
+        Debug.Log("Volume sliders refreshed: " + masterVol + ", " + musicVol + ", " + sfxVol);
+    }
+    
     public void CloseSettings()
     {
-        if (settingsPanel != null)
-        {
-            settingsPanel.SetActive(false);
-        }
-        Debug.Log("Settings panel closed");
+        StartCoroutine(FadeOutSettings());
     }
     
     void OnMasterVolumeChanged(float value)
@@ -304,20 +322,25 @@ public class SettingsManager : MonoBehaviour
         PlayerPrefs.SetFloat(MASTER_VOLUME_KEY, actualVolume);
         PlayerPrefs.Save();
         
-        UpdateAllAudioVolumes();
+        UpdateMusicVolume();
+        UpdateSFXVolume();
+        
+        Debug.Log("Master volume changed to: " + actualVolume);
     }
     
     void OnMusicVolumeChanged(float value)
     {
         float actualVolume = value;
-        
+            
         if (musicVolumeText != null)
             musicVolumeText.text = Mathf.RoundToInt(actualVolume * 100) + "%";
         
         PlayerPrefs.SetFloat(MUSIC_VOLUME_KEY, actualVolume);
         PlayerPrefs.Save();
         
-        UpdateAllAudioVolumes();
+        UpdateMusicVolume();
+        
+        Debug.Log("Music volume changed to: " + actualVolume);
     }
     
     void OnSFXVolumeChanged(float value)
@@ -330,63 +353,62 @@ public class SettingsManager : MonoBehaviour
         PlayerPrefs.SetFloat(SFX_VOLUME_KEY, actualVolume);
         PlayerPrefs.Save();
         
-        UpdateAllAudioVolumes();
+        UpdateSFXVolume();
+        
+        Debug.Log("SFX volume changed to: " + actualVolume);
     }
     
-    void UpdateAllAudioVolumes()
+    void OnResolutionChanged(int index)
     {
-        float masterVol = PlayerPrefs.GetFloat(MASTER_VOLUME_KEY, 0.75f);
-        float musicVol = PlayerPrefs.GetFloat(MUSIC_VOLUME_KEY, 0.8f);
-        float sfxVol = PlayerPrefs.GetFloat(SFX_VOLUME_KEY, 0.8f);
-        
-        // Обновляем фоновую музыку
+        if (!isInitialized) return;
+        selectedResolutionIndex = index;
+        Debug.Log($"Resolution selected: {index}");
+    }
+    
+    void OnDisplayModeChanged(int index)
+    {
+        if (!isInitialized) return;
+        selectedDisplayMode = index;
+        Debug.Log($"Display mode selected: {index}");
+    }
+    
+    void OnRefreshRateChanged(int index)
+    {
+        if (!isInitialized) return;
+        selectedRefreshRate = index;
+        Debug.Log($"Refresh rate selected: {index}");
+    }
+    
+    void UpdateMusicVolume()
+    {
         if (backgroundAudio != null)
         {
+            float masterVol = PlayerPrefs.GetFloat(MASTER_VOLUME_KEY, 1f);
+            float musicVol = PlayerPrefs.GetFloat(MUSIC_VOLUME_KEY, 1f);
             backgroundAudio.volume = musicVol * masterVol;
+            Debug.Log("Updated music volume to: " + (musicVol * masterVol));
         }
-        
-        // Обновляем VideoPlayer'ы в LevelManager
-        UpdateVideoPlayersVolume(sfxVol * masterVol);
-        
-        // Обновляем другие аудио источники в сцене
-        UpdateSceneAudioVolumes(masterVol);
+        else
+        {
+            Debug.LogWarning("Background audio is null in UpdateMusicVolume!");
+        }
     }
     
-    void UpdateVideoPlayersVolume(float volume)
+    void UpdateSFXVolume()
     {
         if (levelManager != null)
         {
-            SetVideoPlayerVolume(levelManager.PrimaryVideoPlayer, volume);
-            SetVideoPlayerVolume(levelManager.SecondaryVideoPlayer, volume);
-        }
-        
-        // Также обновляем VideoPlayer'ы в меню выбора уровня
-        LevelSelectionManager levelSelection = FindAnyObjectByType<LevelSelectionManager>();
-        if (levelSelection != null)
-        {
-            VideoPlayer menuVideoPlayer = levelSelection.GetComponentInChildren<VideoPlayer>();
-            if (menuVideoPlayer != null)
-            {
-                SetVideoPlayerVolume(menuVideoPlayer, volume);
-            }
-        }
-    }
-    
-    void UpdateSceneAudioVolumes(float masterVolume)
-    {
-        AudioSource[] allAudioSources = FindObjectsByType<AudioSource>(FindObjectsSortMode.None);
-        foreach (AudioSource audioSource in allAudioSources)
-        {
-            // Не трогаем фоновую музыку - она уже обработана
-            if (audioSource == backgroundAudio) continue;
+            float masterVol = PlayerPrefs.GetFloat(MASTER_VOLUME_KEY, 1f);
+            float sfxVol = PlayerPrefs.GetFloat(SFX_VOLUME_KEY, 1f);
+            float finalVolume = sfxVol * masterVol;
             
-            // Для остальных аудио источников применяем общую громкость
-            if (!audioSource.gameObject.CompareTag("BackgroundMusic") &&
-                !audioSource.gameObject.name.Contains("Background") &&
-                !audioSource.gameObject.name.Contains("Music"))
-            {
-                audioSource.volume = masterVolume;
-            }
+            SetVideoPlayerVolume(levelManager.PrimaryVideoPlayer, finalVolume);
+            SetVideoPlayerVolume(levelManager.SecondaryVideoPlayer, finalVolume);
+            Debug.Log("Updated SFX volume for video players to: " + finalVolume);
+        }
+        else
+        {
+            Debug.LogWarning("LevelManager is null in UpdateSFXVolume!");
         }
     }
     
@@ -401,69 +423,72 @@ public class SettingsManager : MonoBehaviour
         }
     }
     
-    void OnResolutionChanged(int index)
+    public void ApplyDisplaySettings()
     {
-        if (!isInitialized) return;
+        Debug.Log("ApplyDisplaySettings called!");
         
-        if (index >= 0 && index < filteredResolutions.Count)
+        if (selectedResolutionIndex >= 0 && selectedResolutionIndex < filteredResolutions.Count)
         {
-            Resolution resolution = filteredResolutions[index];
-            int refreshRateValue = GetSelectedRefreshRate();
+            Resolution resolution = filteredResolutions[selectedResolutionIndex];
+            FullScreenMode mode = GetFullScreenMode(selectedDisplayMode);
+            int refreshRateValue = refreshRates[selectedRefreshRate];
             
-            FullScreenMode mode = GetCurrentDisplayMode();
+            Debug.Log($"Applying settings: {resolution.width}x{resolution.height}, {mode}, {refreshRateValue}Hz");
             
-            // Используем новую версию SetResolution с RefreshRate
-            RefreshRate refreshRate = new RefreshRate { numerator = (uint)refreshRateValue, denominator = 1 };
-            Screen.SetResolution(resolution.width, resolution.height, mode, refreshRate);
-            
-            PlayerPrefs.SetInt(RESOLUTION_INDEX_KEY, index);
+            // Сохраняем настройки
+            PlayerPrefs.SetInt(RESOLUTION_WIDTH_KEY, resolution.width);
+            PlayerPrefs.SetInt(RESOLUTION_HEIGHT_KEY, resolution.height);
+            PlayerPrefs.SetInt(DISPLAY_MODE_KEY, selectedDisplayMode);
+            PlayerPrefs.SetInt(REFRESH_RATE_KEY, refreshRateValue);
             PlayerPrefs.Save();
             
-            Debug.Log($"Resolution changed to: {resolution.width}x{resolution.height} @ {refreshRateValue}Hz, Mode: {mode}");
+            // Применяем настройки
+            ApplyResolution(resolution.width, resolution.height, mode, refreshRateValue);
+            
+            // Визуальная обратная связь
+            if (applyButton != null)
+            {
+                TMP_Text buttonText = applyButton.GetComponentInChildren<TMP_Text>();
+                if (buttonText != null)
+                {
+                    string originalText = buttonText.text;
+                    buttonText.text = "ПРИМЕНЕНО!";
+                    StartCoroutine(RestoreButtonText(buttonText, originalText, 2f));
+                }
+            }
         }
-    }
-    
-    void OnDisplayModeChanged(int index)
-    {
-        if (!isInitialized) return;
-        
-        FullScreenMode mode = FullScreenMode.ExclusiveFullScreen;
-        switch (index)
+        else
         {
-            case 0: mode = FullScreenMode.ExclusiveFullScreen; break;
-            case 1: mode = FullScreenMode.FullScreenWindow; break;
-            case 2: mode = FullScreenMode.Windowed; break;
+            Debug.LogError("Invalid resolution index!");
         }
-        
-        Screen.fullScreenMode = mode;
-        PlayerPrefs.SetInt(DISPLAY_MODE_KEY, index);
-        PlayerPrefs.Save();
-        
-        Debug.Log($"Display mode changed to: {mode}");
     }
     
-    void OnRefreshRateChanged(int index)
+    void ApplyResolution(int width, int height, FullScreenMode mode, int refreshRate)
     {
-        if (!isInitialized) return;
-        
-        int refreshRateValue = refreshRates[index];
-        Resolution currentResolution = Screen.currentResolution;
-        FullScreenMode mode = GetCurrentDisplayMode();
-        
-        // Используем новую версию SetResolution с RefreshRate
-        RefreshRate refreshRate = new RefreshRate { numerator = (uint)refreshRateValue, denominator = 1 };
-        Screen.SetResolution(currentResolution.width, currentResolution.height, mode, refreshRate);
-        
-        PlayerPrefs.SetInt(REFRESH_RATE_KEY, index);
-        PlayerPrefs.Save();
-        
-        Debug.Log($"Refresh rate changed to: {refreshRateValue}Hz");
+        try
+        {
+            // Используем новейший метод SetResolution
+            RefreshRate rate = new RefreshRate { numerator = (uint)refreshRate, denominator = 1 };
+            Screen.SetResolution(width, height, mode, rate);
+            Debug.Log($"Resolution applied: {width}x{height}, {mode}, {refreshRate}Hz");
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"Failed to apply resolution: {e.Message}");
+            // Fallback: используем простой метод
+            Screen.SetResolution(width, height, mode);
+        }
     }
     
-    FullScreenMode GetCurrentDisplayMode()
+    IEnumerator RestoreButtonText(TMP_Text textComponent, string originalText, float delay)
     {
-        int displayMode = PlayerPrefs.GetInt(DISPLAY_MODE_KEY, 0);
-        switch (displayMode)
+        yield return new WaitForSeconds(delay);
+        textComponent.text = originalText;
+    }
+    
+    FullScreenMode GetFullScreenMode(int index)
+    {
+        switch (index)
         {
             case 0: return FullScreenMode.ExclusiveFullScreen;
             case 1: return FullScreenMode.FullScreenWindow;
@@ -472,78 +497,113 @@ public class SettingsManager : MonoBehaviour
         }
     }
     
-    int GetSelectedRefreshRate()
-    {
-        int index = PlayerPrefs.GetInt(REFRESH_RATE_KEY, 0);
-        if (index >= 0 && index < refreshRates.Count)
-            return refreshRates[index];
-        return 60;
-    }
-    
     void LoadSettings()
     {
-        Debug.Log("Loading settings from PlayerPrefs...");
+        Debug.Log("Loading settings from PlayerPrefs in " + SceneManager.GetActiveScene().name);
         
-        // Загружаем настройки громкости с корректными значениями по умолчанию
-        float masterVol = PlayerPrefs.GetFloat(MASTER_VOLUME_KEY, 0.75f);
-        float musicVol = PlayerPrefs.GetFloat(MUSIC_VOLUME_KEY, 0.8f);
-        float sfxVol = PlayerPrefs.GetFloat(SFX_VOLUME_KEY, 0.8f);
+        // Убедимся, что все ключи существуют
+        if (!PlayerPrefs.HasKey(MASTER_VOLUME_KEY)) PlayerPrefs.SetFloat(MASTER_VOLUME_KEY, 1f);
+        if (!PlayerPrefs.HasKey(MUSIC_VOLUME_KEY)) PlayerPrefs.SetFloat(MUSIC_VOLUME_KEY, 1f);
+        if (!PlayerPrefs.HasKey(SFX_VOLUME_KEY)) PlayerPrefs.SetFloat(SFX_VOLUME_KEY, 1f);
+        if (!PlayerPrefs.HasKey(RESOLUTION_WIDTH_KEY)) 
+        {
+            PlayerPrefs.SetInt(RESOLUTION_WIDTH_KEY, Screen.currentResolution.width);
+            PlayerPrefs.SetInt(RESOLUTION_HEIGHT_KEY, Screen.currentResolution.height);
+        }
+        if (!PlayerPrefs.HasKey(DISPLAY_MODE_KEY)) PlayerPrefs.SetInt(DISPLAY_MODE_KEY, 1);
+        if (!PlayerPrefs.HasKey(REFRESH_RATE_KEY)) PlayerPrefs.SetInt(REFRESH_RATE_KEY, 60);
         
-        // Устанавливаем значения слайдеров
+        PlayerPrefs.Save();
+        
+        // Загружаем настройки громкости
+        float masterVol = PlayerPrefs.GetFloat(MASTER_VOLUME_KEY, 1f);
         if (masterVolumeSlider != null)
         {
-            masterVolumeSlider.value = masterVol;
+            masterVolumeSlider.SetValueWithoutNotify(masterVol);
             AudioListener.volume = masterVol;
         }
-        
-        if (musicVolumeSlider != null)
-            musicVolumeSlider.value = musicVol;
-        
-        if (sfxVolumeSlider != null)
-            sfxVolumeSlider.value = sfxVol;
-        
-        // Обновляем тексты
         if (masterVolumeText != null)
             masterVolumeText.text = Mathf.RoundToInt(masterVol * 100) + "%";
         
+        float musicVol = PlayerPrefs.GetFloat(MUSIC_VOLUME_KEY, 1f);
+        if (musicVolumeSlider != null)
+        {
+            musicVolumeSlider.SetValueWithoutNotify(musicVol);
+        }
         if (musicVolumeText != null)
             musicVolumeText.text = Mathf.RoundToInt(musicVol * 100) + "%";
         
+        float sfxVol = PlayerPrefs.GetFloat(SFX_VOLUME_KEY, 1f);
+        if (sfxVolumeSlider != null)
+        {
+            sfxVolumeSlider.SetValueWithoutNotify(sfxVol);
+        }
         if (sfxVolumeText != null)
             sfxVolumeText.text = Mathf.RoundToInt(sfxVol * 100) + "%";
         
         // Применяем настройки громкости
-        UpdateAllAudioVolumes();
+        UpdateMusicVolume();
+        UpdateSFXVolume();
         
-        // Применяем графические настройки
-        ApplyGraphicsSettings();
+        // Загружаем настройки дисплея
+        ApplySavedDisplaySettings();
         
-        Debug.Log("Settings loaded successfully");
+        Debug.Log("Settings loaded successfully in " + SceneManager.GetActiveScene().name);
     }
     
-    void ApplyGraphicsSettings()
+    void ApplySavedDisplaySettings()
     {
-        // Применяем разрешение
-        int resIndex = PlayerPrefs.GetInt(RESOLUTION_INDEX_KEY, -1);
-        if (resIndex != -1 && resIndex < filteredResolutions.Count)
+        // Если есть сохраненные настройки дисплея - применяем их
+        if (PlayerPrefs.HasKey(RESOLUTION_WIDTH_KEY) && PlayerPrefs.HasKey(RESOLUTION_HEIGHT_KEY))
         {
-            Resolution resolution = filteredResolutions[resIndex];
-            int refreshRateValue = GetSelectedRefreshRate();
-            FullScreenMode mode = GetCurrentDisplayMode();
+            int savedWidth = PlayerPrefs.GetInt(RESOLUTION_WIDTH_KEY, Screen.currentResolution.width);
+            int savedHeight = PlayerPrefs.GetInt(RESOLUTION_HEIGHT_KEY, Screen.currentResolution.height);
+            int savedDisplayMode = PlayerPrefs.GetInt(DISPLAY_MODE_KEY, 1);
+            int savedRefreshRate = PlayerPrefs.GetInt(REFRESH_RATE_KEY, 60);
             
-            // Используем новую версию SetResolution с RefreshRate
-            RefreshRate refreshRate = new RefreshRate { numerator = (uint)refreshRateValue, denominator = 1 };
-            Screen.SetResolution(resolution.width, resolution.height, mode, refreshRate);
+            FullScreenMode mode = GetFullScreenMode(savedDisplayMode);
+            
+            // Применяем сохраненные настройки
+            ApplyResolution(savedWidth, savedHeight, mode, savedRefreshRate);
+            
+            Debug.Log($"Applied saved display settings: {savedWidth}x{savedHeight}, Mode: {mode}, Refresh Rate: {savedRefreshRate}Hz");
         }
-        
-        // Применяем режим отображения
-        int displayMode = PlayerPrefs.GetInt(DISPLAY_MODE_KEY, 0);
-        OnDisplayModeChanged(displayMode);
     }
     
-    void ApplyAllSettings()
+    IEnumerator FadeInSettings()
     {
-        LoadSettings();
+        if (settingsCanvasGroup != null)
+        {
+            settingsCanvasGroup.alpha = 0f;
+            float duration = 0.3f;
+            float time = 0;
+            
+            while (time < duration)
+            {
+                settingsCanvasGroup.alpha = Mathf.Lerp(0f, 1f, time / duration);
+                time += Time.deltaTime;
+                yield return null;
+            }
+            settingsCanvasGroup.alpha = 1f;
+        }
+    }
+    
+    IEnumerator FadeOutSettings()
+    {
+        if (settingsCanvasGroup != null)
+        {
+            float duration = 0.3f;
+            float time = 0;
+            
+            while (time < duration)
+            {
+                settingsCanvasGroup.alpha = Mathf.Lerp(1f, 0f, time / duration);
+                time += Time.deltaTime;
+                yield return null;
+            }
+            settingsCanvasGroup.alpha = 0f;
+        }
+        settingsPanel.SetActive(false);
     }
     
     public void RestartGame()
@@ -555,15 +615,13 @@ public class SettingsManager : MonoBehaviour
     {
         Debug.Log("Returning to main menu...");
         
+        // Устанавливаем флаг для LevelSelectionManager
+        LevelSelectionManager.comingFromSettings = true;
+        
         // Сохраняем настройки перед выходом
         PlayerPrefs.Save();
         
-        // Загружаем главное меню
+        // Загружаем сцену главного меню (SampleScene)
         SceneManager.LoadScene("SampleScene");
-    }
-    
-    void OnDestroy()
-    {
-        SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 }
