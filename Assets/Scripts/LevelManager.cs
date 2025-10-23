@@ -34,7 +34,7 @@ public class LevelManager : MonoBehaviour
     public LoadingScreenManager loadingScreen;
     
     [Header("Audio for Settings")]
-    public AudioSource levelBackgroundAudio; // Фоновая музыка уровня (опционально)
+    public AudioSource levelBackgroundAudio;
     
     // Публичные свойства для доступа из SettingsManager
     public VideoPlayer PrimaryVideoPlayer => primaryVideoPlayer;
@@ -122,36 +122,19 @@ public class LevelManager : MonoBehaviour
         }
 
         ApplyVolumeSettings();
-
     }
     
     private void ApplyVolumeSettings()
     {
-        SettingsManager settingsManager = FindAnyObjectByType<SettingsManager>();
-        if (settingsManager != null)
-        {
-            // Вызываем обновление громкости видео-плееров
-            System.Reflection.MethodInfo method = typeof(SettingsManager).GetMethod("UpdateSFXVolume", 
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            if (method != null)
-            {
-                method.Invoke(settingsManager, null);
-            }
-        }
-        else
-        {
-            Debug.LogWarning("SettingsManager not found in Level1Scene, applying volume manually");
-            
-            // Применяем громкость вручную если SettingsManager не найден
-            float masterVol = PlayerPrefs.GetFloat("MasterVolume", 1f);
-            float sfxVol = PlayerPrefs.GetFloat("SFXVolume", 1f);
-            float finalVolume = sfxVol * masterVol;
-            
-            SetVideoPlayerVolume(primaryVideoPlayer, finalVolume);
-            SetVideoPlayerVolume(secondaryVideoPlayer, finalVolume);
-            
-            Debug.Log("Applied volume settings manually: " + finalVolume);
-        }
+        // Применяем громкость вручную
+        float masterVol = PlayerPrefs.GetFloat("MasterVolume", 1f);
+        float sfxVol = PlayerPrefs.GetFloat("SFXVolume", 1f);
+        float finalVolume = sfxVol * masterVol;
+        
+        SetVideoPlayerVolume(primaryVideoPlayer, finalVolume);
+        SetVideoPlayerVolume(secondaryVideoPlayer, finalVolume);
+        
+        Debug.Log("Applied volume settings manually: " + finalVolume);
     }
 
     // Вспомогательный метод для установки громкости VideoPlayer
@@ -175,14 +158,25 @@ public class LevelManager : MonoBehaviour
             Debug.Log($"Video playing: {activeVideoPlayer.time:F2}/{activeVideoPlayer.length:F2}, Segment: {currentSegmentIndex}");
         }
         
-        // Обработка открытия настроек
-        if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.F1))
+        // УБРАНА обработка ESC - теперь это делает только SettingsManager
+        // Оставляем только F1 для открытия настроек в уровне
+        if (Input.GetKeyDown(KeyCode.F1))
         {
-            SettingsManager settings = FindAnyObjectByType<SettingsManager>();
-            if (settings != null)
-            {
-                settings.ToggleSettings();
-            }
+            ToggleSettingsInLevel();
+        }
+    }
+    
+    // Метод для переключения настроек в уровне (только по F1)
+    void ToggleSettingsInLevel()
+    {
+        SettingsManager settings = FindAnyObjectByType<SettingsManager>();
+        if (settings != null)
+        {
+            settings.ToggleSettings();
+        }
+        else
+        {
+            Debug.LogWarning("SettingsManager not found in Level1Scene!");
         }
     }
     

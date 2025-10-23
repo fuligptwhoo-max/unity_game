@@ -1256,6 +1256,22 @@ MonoBehaviour:
     pauseTime: 0
     pauseButtons: []
     pauseDialogueText: 
+    nextSegment: 6
+    requiredFlag: 
+  - segmentName: 1488intro
+    video: {fileID: 32900000, guid: 2996498a0a881a147a1ec60ee5eecfff, type: 3}
+    audio: {fileID: 8300000, guid: ed0001796cc667b4687efc6589d9d38c, type: 3}
+    autoContinue: 1
+    isLooping: 0
+    showDialogue: 0
+    dialogueText: 
+    continueButtonText: 
+    showChoices: 0
+    choices: []
+    hasPause: 0
+    pauseTime: 0
+    pauseButtons: []
+    pauseDialogueText: 
     nextSegment: 0
     requiredFlag: 
   loadingScreen: {fileID: 968756686}
@@ -1417,17 +1433,6 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 942009658915846182, guid: 0faf91c629c46de4ea008d5f31e925a5, type: 3}
   m_PrefabInstance: {fileID: 975497240}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &723134870 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 42904248942747218, guid: 0faf91c629c46de4ea008d5f31e925a5, type: 3}
-  m_PrefabInstance: {fileID: 975497240}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 975497249}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1053741938fb28649b57e9915939c26f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SettingsManager
 --- !u!1 &732075573
 GameObject:
   m_ObjectHideFlags: 0
@@ -2295,7 +2300,7 @@ PrefabInstance:
     - target: {fileID: 8454176343128813579, guid: 205891fe591f1a1429b53b50f527407a, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
-      objectReference: {fileID: 723134870}
+      objectReference: {fileID: 1066441000}
     - target: {fileID: 8454176343128813579, guid: 205891fe591f1a1429b53b50f527407a, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
       value: ToggleSettings
@@ -3024,6 +3029,67 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!1 &1066440999
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1066441001}
+  - component: {fileID: 1066441000}
+  m_Layer: 0
+  m_Name: SettingManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1066441000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1066440999}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1053741938fb28649b57e9915939c26f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SettingsManager
+  settingsPanel: {fileID: 975497249}
+  settingsCanvasGroup: {fileID: 975497248}
+  backgroundAudio: {fileID: 0}
+  levelManager: {fileID: 0}
+  masterVolumeSlider: {fileID: 1636630049}
+  masterVolumeText: {fileID: 1459695596}
+  musicVolumeSlider: {fileID: 1210839406}
+  musicVolumeText: {fileID: 618475983}
+  sfxVolumeSlider: {fileID: 0}
+  sfxVolumeText: {fileID: 0}
+  resolutionDropdown: {fileID: 975497247}
+  displayModeDropdown: {fileID: 975497246}
+  refreshRateDropdown: {fileID: 975497245}
+  mainMenuButton: {fileID: 1907273135}
+  closeButton: {fileID: 1730260134}
+  applyButton: {fileID: 659451657}
+  autoFindAudioInLevel: 1
+--- !u!4 &1066441001
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1066440999}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1077286135
 GameObject:
   m_ObjectHideFlags: 0
@@ -5069,7 +5135,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 723134870}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: SettingsManager, Assembly-CSharp
         m_MethodName: GoToMainMenu
         m_Mode: 1
@@ -5681,3 +5747,4 @@ SceneRoots:
   - {fileID: 1697815746}
   - {fileID: 1952682962}
   - {fileID: 732075575}
+  - {fileID: 1066441001}

@@ -2436,7 +2436,6 @@ GameObject:
   m_Component:
   - component: {fileID: 942009658915846182}
   - component: {fileID: 5035413915871482398}
-  - component: {fileID: 42904248942747218}
   m_Layer: 5
   m_Name: SettingsPanel
   m_TagString: Untagged
@@ -2478,29 +2477,6 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
---- !u!114 &42904248942747218
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3645703551959296037}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1053741938fb28649b57e9915939c26f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SettingsManager
-  settingsPanel: {fileID: 3645703551959296037}
-  settingsCanvasGroup: {fileID: 5035413915871482398}
-  menuBackgroundAudio: {fileID: 0}
-  splashAudio: {fileID: 0}
-  masterVolumeSlider: {fileID: 6425064922988106582}
-  masterVolumeText: {fileID: 6113441969741012642}
-  musicVolumeSlider: {fileID: 1679447272176330100}
-  musicVolumeText: {fileID: 1193162355643301391}
-  resolutionDropdown: {fileID: 6417113846441541098}
-  displayModeDropdown: {fileID: 8696350914336116804}
-  refreshRateDropdown: {fileID: 8319765254510194506}
 --- !u!1 &3712866150759929007
 GameObject:
   m_ObjectHideFlags: 0
@@ -4600,7 +4576,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 42904248942747218}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: SettingsManager, Assembly-CSharp
         m_MethodName: CloseSettings
         m_Mode: 1

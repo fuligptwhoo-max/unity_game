@@ -28,8 +28,9 @@ public class LevelItem : MonoBehaviour
             layoutElement = gameObject.AddComponent<LayoutElement>();
         }
         
-        layoutElement.preferredWidth = 150f;
-        layoutElement.preferredHeight = 150f;
+        // Размеры 200x200
+        layoutElement.preferredWidth = 200f;
+        layoutElement.preferredHeight = 200f;
     }
     
     public void Initialize(LevelSelectionManager manager, int index, string levelName)
@@ -52,7 +53,7 @@ public class LevelItem : MonoBehaviour
     
     public void SetSelected(bool selected)
     {
-        transform.localScale = selected ? Vector3.one * 1.2f : Vector3.one;
+        transform.localScale = selected ? Vector3.one * 1.1f : Vector3.one;
         
         if (background != null)
         {

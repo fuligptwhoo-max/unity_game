@@ -12,8 +12,9 @@ public class LevelSelectionManager : MonoBehaviour
     public RawImage videoDisplay;
     public Button playLevelButton;
     public TMP_Text playButtonText;
+    public TMP_Text levelDescriptionText;
     
-    [Header("Levels Slider")]
+    [Header("Levels Panel")]
     public ScrollRect levelsScrollRect;
     public Transform levelsContent;
     public GameObject levelItemPrefab;
@@ -28,20 +29,20 @@ public class LevelSelectionManager : MonoBehaviour
     private VideoPlayer videoPlayer;
     private RenderTexture renderTexture;
     
-    // Статическая переменная для отслеживания перехода из настроек
     public static bool comingFromSettings = false;
     
     void Start()
     {
         InitializeComponents();
         CreateLevelItems();
+        
+        // УБРАНО: автоматический выбор первого уровня
         SetPreviewVisible(false);
         
-        // Если пришли из настроек, автоматически выбираем первый уровень
-        if (comingFromSettings && levels.Count > 0)
+        // Если пришли из настроек, тоже не выбираем уровень автоматически
+        if (comingFromSettings)
         {
             comingFromSettings = false;
-            SelectLevel(0);
         }
     }
     
@@ -71,6 +72,63 @@ public class LevelSelectionManager : MonoBehaviour
         
         if (audioSource == null)
             audioSource = GetComponent<AudioSource>();
+            
+        // Настраиваем вертикальный скролл
+        if (levelsScrollRect != null)
+        {
+            levelsScrollRect.vertical = true;
+            levelsScrollRect.horizontal = false;
+        }
+        
+        // Настраиваем layout контента
+        FixContentLayout();
+    }
+    
+    void FixContentLayout()
+    {
+        if (levelsContent == null) return;
+        
+        // Удаляем горизонтальный layout если есть
+        HorizontalLayoutGroup horizontal = levelsContent.GetComponent<HorizontalLayoutGroup>();
+        if (horizontal != null)
+        {
+            DestroyImmediate(horizontal);
+        }
+        
+        // Добавляем вертикальный layout
+        VerticalLayoutGroup vertical = levelsContent.GetComponent<VerticalLayoutGroup>();
+        if (vertical == null)
+        {
+            vertical = levelsContent.gameObject.AddComponent<VerticalLayoutGroup>();
+        }
+        
+        // Настраиваем для центрирования
+        vertical.padding = new RectOffset(10, 10, 20, 20);
+        vertical.spacing = 50f;
+        vertical.childAlignment = TextAnchor.MiddleCenter;
+        vertical.childControlWidth = true;
+        vertical.childControlHeight = true;
+        vertical.childForceExpandWidth = false;
+        vertical.childForceExpandHeight = false;
+        
+        // Content Size Fitter для автоматической высоты
+        ContentSizeFitter fitter = levelsContent.GetComponent<ContentSizeFitter>();
+        if (fitter == null)
+        {
+            fitter = levelsContent.gameObject.AddComponent<ContentSizeFitter>();
+        }
+        fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        
+        // Настраиваем RectTransform Content для центрирования
+        RectTransform contentRect = levelsContent.GetComponent<RectTransform>();
+        if (contentRect != null)
+        {
+            contentRect.anchorMin = new Vector2(0.5f, 0.5f);
+            contentRect.anchorMax = new Vector2(0.5f, 0.5f);
+            contentRect.pivot = new Vector2(0.5f, 0.5f);
+            contentRect.anchoredPosition = new Vector2(0f, 0f);
+        }
     }
     
     void CreateLevelItems()
@@ -111,7 +169,6 @@ public class LevelSelectionManager : MonoBehaviour
         
         SetPreviewVisible(true);
         
-        // Останавливаем предыдущее видео
         if (videoPlayer != null)
         {
             videoPlayer.Stop();
@@ -123,7 +180,6 @@ public class LevelSelectionManager : MonoBehaviour
             }
         }
         
-        // Останавливаем предыдущий звук и запускаем новый
         if (audioSource != null)
         {
             audioSource.Stop();
@@ -132,21 +188,17 @@ public class LevelSelectionManager : MonoBehaviour
             {
                 audioSource.clip = selectedLevel.previewAudio;
                 audioSource.Play();
-                Debug.Log($"Playing preview audio: {selectedLevel.previewAudio.name}");
             }
-            else
-            {
-                Debug.LogWarning($"No preview audio for level: {selectedLevel.levelName}");
-            }
-        }
-        else
-        {
-            Debug.LogError("AudioSource is not assigned!");
         }
         
         if (playButtonText != null)
         {
-            playButtonText.text = $"Пройти {selectedLevel.levelName}";
+            playButtonText.text = $"Играть: {selectedLevel.levelName}";
+        }
+        
+        if (levelDescriptionText != null)
+        {
+            levelDescriptionText.text = selectedLevel.levelDescription;
         }
         
         UpdateLevelItemsVisual();
@@ -158,6 +210,8 @@ public class LevelSelectionManager : MonoBehaviour
             videoDisplay.gameObject.SetActive(visible);
         if (playLevelButton != null)
             playLevelButton.gameObject.SetActive(visible);
+        if (levelDescriptionText != null)
+            levelDescriptionText.gameObject.SetActive(visible);
     }
     
     void UpdateLevelItemsVisual()
@@ -187,20 +241,12 @@ public class LevelSelectionManager : MonoBehaviour
         string sceneName = levels[currentLevelIndex].sceneName;
         if (!string.IsNullOrEmpty(sceneName))
         {
-            Debug.Log($"Loading scene: {sceneName}");
             StartCoroutine(LoadLevelScene(sceneName));
-        }
-        else
-        {
-            Debug.LogError("Scene name is empty!");
         }
     }
 
     IEnumerator LoadLevelScene(string sceneName)
     {
-        Debug.Log($"Loading scene: {sceneName}");
-        
-        // Останавливаем звук превью при переходе на уровень
         if (audioSource != null)
             audioSource.Stop();
             
@@ -211,8 +257,6 @@ public class LevelSelectionManager : MonoBehaviour
         {
             yield return null;
         }
-        
-        Debug.Log("Scene loaded successfully");
     }
     
     void OnDestroy()
@@ -232,4 +276,5 @@ public class LevelData
     public VideoClip previewVideo;
     public AudioClip previewAudio;
     public string sceneName;
+    public string levelDescription;
 }

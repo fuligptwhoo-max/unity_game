@@ -34,6 +34,9 @@ public class SettingsManager : MonoBehaviour
     public Button closeButton;
     public Button applyButton;
     
+    [Header("Level Scene Settings")]
+    public bool autoFindAudioInLevel = true;
+    
     private Resolution[] resolutions;
     private List<Resolution> filteredResolutions = new List<Resolution>();
     private List<int> refreshRates = new List<int> { 60, 75, 120, 144, 165, 240 };
@@ -60,18 +63,38 @@ public class SettingsManager : MonoBehaviour
     
     void InitializeSettings()
     {
+        // Проверяем, в какой сцене мы находимся
+        string currentScene = SceneManager.GetActiveScene().name;
+        bool isInLevelScene = currentScene == "Level1Scene" || currentScene.Contains("Level");
+        
+        Debug.Log($"SettingsManager initializing in scene: {currentScene}");
+        
         // Находим компоненты
-        if (backgroundAudio == null)
+        if (backgroundAudio == null && autoFindAudioInLevel)
         {
-            FindAudioSources();
+            FindAudioSources(isInLevelScene);
         }
         
-        if (levelManager == null)
+        // В Level1Scene ищем LevelManager
+        if (isInLevelScene && levelManager == null)
         {
             levelManager = FindAnyObjectByType<LevelManager>();
+            if (levelManager != null)
+            {
+                Debug.Log("Found LevelManager in level scene: " + levelManager.gameObject.name);
+            }
         }
         
-        settingsPanel.SetActive(false);
+        // Создаем панель настроек если её нет
+        if (settingsPanel == null)
+        {
+            CreateSettingsPanel();
+        }
+        
+        if (settingsPanel != null)
+        {
+            settingsPanel.SetActive(false);
+        }
         
         // Инициализация слайдеров звука
         if (masterVolumeSlider != null)
@@ -105,6 +128,16 @@ public class SettingsManager : MonoBehaviour
         if (mainMenuButton != null)
         {
             mainMenuButton.onClick.AddListener(GoToMainMenu);
+            
+            // В Level сцене показываем кнопку главного меню, в главном меню скрываем
+            if (isInLevelScene)
+            {
+                mainMenuButton.gameObject.SetActive(true);
+            }
+            else
+            {
+                mainMenuButton.gameObject.SetActive(false);
+            }
         }
         
         if (closeButton != null)
@@ -121,32 +154,116 @@ public class SettingsManager : MonoBehaviour
         LoadSettings();
         isInitialized = true;
         
-        Debug.Log("SettingsManager initialized in " + SceneManager.GetActiveScene().name);
+        Debug.Log("SettingsManager initialized successfully in " + currentScene);
     }
     
-    void Update()
+    void CreateSettingsPanel()
     {
-        if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.F1))
+        Debug.Log("Creating settings panel dynamically...");
+        
+        // Ищем Canvas в сцене
+        Canvas canvas = FindAnyObjectByType<Canvas>();
+        if (canvas == null)
         {
-            ToggleSettings();
+            Debug.LogError("No Canvas found in scene!");
+            return;
         }
+        
+        // Создаем панель настроек
+        GameObject panel = new GameObject("SettingsPanel");
+        panel.transform.SetParent(canvas.transform);
+        
+        // Настраиваем RectTransform
+        RectTransform panelRect = panel.AddComponent<RectTransform>();
+        panelRect.anchorMin = Vector2.zero;
+        panelRect.anchorMax = Vector2.one;
+        panelRect.offsetMin = Vector2.zero;
+        panelRect.offsetMax = Vector2.zero;
+        
+        // Добавляем фон
+        Image background = panel.AddComponent<Image>();
+        background.color = new Color(0, 0, 0, 0.85f);
+        
+        // Добавляем CanvasGroup для анимации
+        CanvasGroup canvasGroup = panel.AddComponent<CanvasGroup>();
+        
+        settingsPanel = panel;
+        settingsCanvasGroup = canvasGroup;
+        
+        // Создаем базовый UI (можно расширить при необходимости)
+        CreateBasicSettingsUI(panel);
+        
+        Debug.Log("Settings panel created successfully");
     }
     
-    void FindAudioSources()
+    void CreateBasicSettingsUI(GameObject parent)
+    {
+        // Здесь можно создать базовые элементы UI для настроек
+        // Для простоты оставляем минимальную функциональность
+        Debug.Log("Creating basic settings UI...");
+        
+        // Создаем кнопку закрытия
+        GameObject closeBtn = new GameObject("CloseButton");
+        closeBtn.transform.SetParent(parent.transform);
+        RectTransform closeRect = closeBtn.AddComponent<RectTransform>();
+        closeRect.anchorMin = new Vector2(0.9f, 0.9f);
+        closeRect.anchorMax = new Vector2(0.98f, 0.98f);
+        closeRect.offsetMin = Vector2.zero;
+        closeRect.offsetMax = Vector2.zero;
+        
+        Image closeImage = closeBtn.AddComponent<Image>();
+        closeImage.color = Color.red;
+        
+        Button closeButtonComp = closeBtn.AddComponent<Button>();
+        closeButtonComp.onClick.AddListener(CloseSettings);
+        
+        // Текст для кнопки
+        GameObject closeText = new GameObject("CloseText");
+        closeText.transform.SetParent(closeBtn.transform);
+        RectTransform textRect = closeText.AddComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = Vector2.zero;
+        textRect.offsetMax = Vector2.zero;
+        
+        TMP_Text textComp = closeText.AddComponent<TextMeshProUGUI>();
+        textComp.text = "X";
+        textComp.color = Color.white;
+        textComp.alignment = TextAlignmentOptions.Center;
+        textComp.fontSize = 24;
+    }
+    
+    void FindAudioSources(bool isInLevelScene)
     {
         AudioSource[] allAudioSources = FindObjectsByType<AudioSource>(FindObjectsSortMode.None);
         
         foreach (AudioSource audioSource in allAudioSources)
         {
-            // В Level1Scene ищем LevelBackgroundAudio или аналогичный
-            if (audioSource.gameObject.CompareTag("BackgroundMusic") || 
-                audioSource.gameObject.name.Contains("Background") ||
-                audioSource.gameObject.name.Contains("Music") ||
-                audioSource.gameObject.name.Contains("LevelBackground"))
+            if (isInLevelScene)
             {
-                backgroundAudio = audioSource;
-                Debug.Log("Found background audio in " + SceneManager.GetActiveScene().name + ": " + audioSource.gameObject.name);
-                break;
+                // В Level сцене ищем фоновую музыку
+                if (audioSource.gameObject.CompareTag("BackgroundMusic") || 
+                    audioSource.gameObject.name.Contains("Background") ||
+                    audioSource.gameObject.name.Contains("Music") ||
+                    audioSource.gameObject.name.Contains("LevelBackground") ||
+                    audioSource.loop) // Если аудио зациклено, вероятно это фоновая музыка
+                {
+                    backgroundAudio = audioSource;
+                    Debug.Log("Found background audio in level scene: " + audioSource.gameObject.name);
+                    break;
+                }
+            }
+            else
+            {
+                // В главном меню ищем фоновую музыку
+                if (audioSource.gameObject.CompareTag("BackgroundMusic") || 
+                    audioSource.gameObject.name.Contains("Background") ||
+                    audioSource.gameObject.name.Contains("Music"))
+                {
+                    backgroundAudio = audioSource;
+                    Debug.Log("Found background audio in main menu: " + audioSource.gameObject.name);
+                    break;
+                }
             }
         }
         
@@ -155,6 +272,11 @@ public class SettingsManager : MonoBehaviour
         {
             backgroundAudio = allAudioSources[0];
             Debug.Log("Using first available audio source: " + backgroundAudio.gameObject.name);
+        }
+        
+        if (backgroundAudio == null)
+        {
+            Debug.LogWarning("No audio sources found in scene!");
         }
     }
     
@@ -260,8 +382,23 @@ public class SettingsManager : MonoBehaviour
         refreshRateDropdown.RefreshShownValue();
     }
     
+    void Update()
+    {
+        // Обработка открытия настроек по ESC или F1
+        if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.F1))
+        {
+            ToggleSettings();
+        }
+    }
+    
     public void ToggleSettings()
     {
+        if (settingsPanel == null)
+        {
+            Debug.LogError("Settings panel is null!");
+            return;
+        }
+        
         if (!settingsPanel.activeSelf)
         {
             // При открытии настроек обновляем значения слайдеров
@@ -308,6 +445,8 @@ public class SettingsManager : MonoBehaviour
     
     public void CloseSettings()
     {
+        if (settingsPanel == null || !settingsPanel.activeSelf) return;
+        
         StartCoroutine(FadeOutSettings());
     }
     
@@ -396,6 +535,7 @@ public class SettingsManager : MonoBehaviour
     
     void UpdateSFXVolume()
     {
+        // Обновляем громкость видео-плееров в Level сцене
         if (levelManager != null)
         {
             float masterVol = PlayerPrefs.GetFloat(MASTER_VOLUME_KEY, 1f);
@@ -408,7 +548,7 @@ public class SettingsManager : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("LevelManager is null in UpdateSFXVolume!");
+            Debug.Log("LevelManager is null in UpdateSFXVolume - might be in main menu");
         }
     }
     
@@ -499,7 +639,8 @@ public class SettingsManager : MonoBehaviour
     
     void LoadSettings()
     {
-        Debug.Log("Loading settings from PlayerPrefs in " + SceneManager.GetActiveScene().name);
+        string currentScene = SceneManager.GetActiveScene().name;
+        Debug.Log("Loading settings from PlayerPrefs in " + currentScene);
         
         // Убедимся, что все ключи существуют
         if (!PlayerPrefs.HasKey(MASTER_VOLUME_KEY)) PlayerPrefs.SetFloat(MASTER_VOLUME_KEY, 1f);
@@ -548,7 +689,7 @@ public class SettingsManager : MonoBehaviour
         // Загружаем настройки дисплея
         ApplySavedDisplaySettings();
         
-        Debug.Log("Settings loaded successfully in " + SceneManager.GetActiveScene().name);
+        Debug.Log("Settings loaded successfully in " + currentScene);
     }
     
     void ApplySavedDisplaySettings()
@@ -603,7 +744,9 @@ public class SettingsManager : MonoBehaviour
             }
             settingsCanvasGroup.alpha = 0f;
         }
-        settingsPanel.SetActive(false);
+        
+        if (settingsPanel != null)
+            settingsPanel.SetActive(false);
     }
     
     public void RestartGame()

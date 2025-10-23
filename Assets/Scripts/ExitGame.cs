@@ -12,7 +12,6 @@ public class ExitGame : MonoBehaviour
     
     void Start()
     {
-        // Проверяем, назначена ли панель, перед ее использованием
         if (exitDialogPanel != null)
         {
             exitDialogPanel.SetActive(false);
@@ -22,7 +21,6 @@ public class ExitGame : MonoBehaviour
             Debug.LogError("ExitDialogPanel не назначена в инспекторе!");
         }
         
-        // Настраиваем кнопки
         if (yesButton != null)
             yesButton.onClick.AddListener(ConfirmQuit);
             
