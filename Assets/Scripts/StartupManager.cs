@@ -14,6 +14,7 @@ public class StartupManager : MonoBehaviour
 
     private bool isSplashFinished = false;
     private MainMenuAnimator menuAnimator;
+    private bool skipRequested = false; // НОВОЕ: флаг пропуска
 
     void Start()
     {
@@ -41,6 +42,16 @@ public class StartupManager : MonoBehaviour
         }
     }
 
+    void Update()
+    {
+        // НОВОЕ: Пропуск интро по нажатию любой клавиши или клику мыши
+        if (!isSplashFinished && !skipRequested && (Input.anyKeyDown || Input.GetMouseButtonDown(0)))
+        {
+            skipRequested = true;
+            Debug.Log("Splash screen skip requested");
+        }
+    }
+
     void OnSplashVideoFinished(VideoPlayer vp)
     {
         isSplashFinished = true;
@@ -59,11 +70,16 @@ public class StartupManager : MonoBehaviour
 
         splashVideoPlayer.Play();
 
-        // Ждем окончания видео
-        yield return new WaitUntil(() => isSplashFinished);
+        // Ждем окончания видео ИЛИ запроса на пропуск
+        yield return new WaitUntil(() => isSplashFinished || skipRequested);
 
-        if (splashAudioSource != null)
-            splashAudioSource.Stop();
+        if (skipRequested)
+        {
+            splashVideoPlayer.Stop();
+            if (splashAudioSource != null)
+                splashAudioSource.Stop();
+            Debug.Log("Splash screen skipped by user");
+        }
 
         // Переключаемся на фоновое видео меню
         splashVideoPlayer.gameObject.SetActive(false);

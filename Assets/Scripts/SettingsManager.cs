@@ -34,6 +34,14 @@ public class SettingsManager : MonoBehaviour
     public Button closeButton;
     public Button applyButton;
     
+    // Кнопка настроек из главного меню
+    [Header("Main Menu Button")]
+    public Button settingsButton;
+    
+    // НОВОЕ: Кнопка сброса прогресса
+    [Header("Progress Management")]
+    public Button resetProgressButton;
+    
     [Header("Level Scene Settings")]
     public bool autoFindAudioInLevel = true;
     
@@ -69,6 +77,14 @@ public class SettingsManager : MonoBehaviour
         
         Debug.Log($"SettingsManager initializing in scene: {currentScene}");
         
+        // Привязываем кнопку настроек из главного меню
+        if (settingsButton != null)
+        {
+            settingsButton.onClick.RemoveAllListeners();
+            settingsButton.onClick.AddListener(ToggleSettings);
+            Debug.Log("Settings button from main menu connected");
+        }
+        
         // Находим компоненты
         if (backgroundAudio == null && autoFindAudioInLevel)
         {
@@ -78,7 +94,7 @@ public class SettingsManager : MonoBehaviour
         // В Level1Scene ищем LevelManager
         if (isInLevelScene && levelManager == null)
         {
-            levelManager = FindAnyObjectByType<LevelManager>();
+            levelManager = FindFirstObjectByType<LevelManager>();
             if (levelManager != null)
             {
                 Debug.Log("Found LevelManager in level scene: " + levelManager.gameObject.name);
@@ -150,6 +166,16 @@ public class SettingsManager : MonoBehaviour
             applyButton.onClick.AddListener(ApplyDisplaySettings);
         }
         
+        // НОВОЕ: Инициализация кнопки сброса прогресса
+        if (resetProgressButton != null)
+        {
+            resetProgressButton.onClick.AddListener(ResetGameProgress);
+            
+            // Показываем кнопку сброса прогресса только в Level сцене
+            resetProgressButton.gameObject.SetActive(isInLevelScene);
+            Debug.Log("Reset progress button initialized - visible in level scene: " + isInLevelScene);
+        }
+        
         InitializeResolutionSettings();
         LoadSettings();
         isInitialized = true;
@@ -162,7 +188,7 @@ public class SettingsManager : MonoBehaviour
         Debug.Log("Creating settings panel dynamically...");
         
         // Ищем Canvas в сцене
-        Canvas canvas = FindAnyObjectByType<Canvas>();
+        Canvas canvas = FindFirstObjectByType<Canvas>();
         if (canvas == null)
         {
             Debug.LogError("No Canvas found in scene!");
@@ -190,7 +216,7 @@ public class SettingsManager : MonoBehaviour
         settingsPanel = panel;
         settingsCanvasGroup = canvasGroup;
         
-        // Создаем базовый UI (можно расширить при необходимости)
+        // Создаем базовый UI
         CreateBasicSettingsUI(panel);
         
         Debug.Log("Settings panel created successfully");
@@ -198,8 +224,6 @@ public class SettingsManager : MonoBehaviour
     
     void CreateBasicSettingsUI(GameObject parent)
     {
-        // Здесь можно создать базовые элементы UI для настроек
-        // Для простоты оставляем минимальную функциональность
         Debug.Log("Creating basic settings UI...");
         
         // Создаем кнопку закрытия
@@ -246,7 +270,7 @@ public class SettingsManager : MonoBehaviour
                     audioSource.gameObject.name.Contains("Background") ||
                     audioSource.gameObject.name.Contains("Music") ||
                     audioSource.gameObject.name.Contains("LevelBackground") ||
-                    audioSource.loop) // Если аудио зациклено, вероятно это фоновая музыка
+                    audioSource.loop)
                 {
                     backgroundAudio = audioSource;
                     Debug.Log("Found background audio in level scene: " + audioSource.gameObject.name);
@@ -535,20 +559,26 @@ public class SettingsManager : MonoBehaviour
     
     void UpdateSFXVolume()
     {
-        // Обновляем громкость видео-плееров в Level сцене
+        float masterVol = PlayerPrefs.GetFloat(MASTER_VOLUME_KEY, 1f);
+        float sfxVol = PlayerPrefs.GetFloat(SFX_VOLUME_KEY, 1f);
+        float finalVolume = sfxVol * masterVol;
+        
+        // Обновляем видео-плееры в LevelManager
         if (levelManager != null)
         {
-            float masterVol = PlayerPrefs.GetFloat(MASTER_VOLUME_KEY, 1f);
-            float sfxVol = PlayerPrefs.GetFloat(SFX_VOLUME_KEY, 1f);
-            float finalVolume = sfxVol * masterVol;
-            
             SetVideoPlayerVolume(levelManager.PrimaryVideoPlayer, finalVolume);
             SetVideoPlayerVolume(levelManager.SecondaryVideoPlayer, finalVolume);
             Debug.Log("Updated SFX volume for video players to: " + finalVolume);
         }
-        else
+        
+        // Обновляем все остальные AudioSource в сцене (кроме фоновой музыки)
+        AudioSource[] allAudioSources = FindObjectsByType<AudioSource>(FindObjectsSortMode.None);
+        foreach (AudioSource audioSource in allAudioSources)
         {
-            Debug.Log("LevelManager is null in UpdateSFXVolume - might be in main menu");
+            if (audioSource != backgroundAudio)
+            {
+                audioSource.volume = finalVolume;
+            }
         }
     }
     
@@ -607,7 +637,6 @@ public class SettingsManager : MonoBehaviour
     {
         try
         {
-            // Используем новейший метод SetResolution
             RefreshRate rate = new RefreshRate { numerator = (uint)refreshRate, denominator = 1 };
             Screen.SetResolution(width, height, mode, rate);
             Debug.Log($"Resolution applied: {width}x{height}, {mode}, {refreshRate}Hz");
@@ -615,7 +644,6 @@ public class SettingsManager : MonoBehaviour
         catch (System.Exception e)
         {
             Debug.LogError($"Failed to apply resolution: {e.Message}");
-            // Fallback: используем простой метод
             Screen.SetResolution(width, height, mode);
         }
     }
@@ -694,7 +722,6 @@ public class SettingsManager : MonoBehaviour
     
     void ApplySavedDisplaySettings()
     {
-        // Если есть сохраненные настройки дисплея - применяем их
         if (PlayerPrefs.HasKey(RESOLUTION_WIDTH_KEY) && PlayerPrefs.HasKey(RESOLUTION_HEIGHT_KEY))
         {
             int savedWidth = PlayerPrefs.GetInt(RESOLUTION_WIDTH_KEY, Screen.currentResolution.width);
@@ -704,7 +731,6 @@ public class SettingsManager : MonoBehaviour
             
             FullScreenMode mode = GetFullScreenMode(savedDisplayMode);
             
-            // Применяем сохраненные настройки
             ApplyResolution(savedWidth, savedHeight, mode, savedRefreshRate);
             
             Debug.Log($"Applied saved display settings: {savedWidth}x{savedHeight}, Mode: {mode}, Refresh Rate: {savedRefreshRate}Hz");
@@ -749,6 +775,42 @@ public class SettingsManager : MonoBehaviour
             settingsPanel.SetActive(false);
     }
     
+    // НОВЫЙ МЕТОД: Сброс прогресса игры
+    public void ResetGameProgress()
+    {
+        Debug.Log("Resetting game progress from SettingsManager");
+        
+        // Ищем LevelManager
+        LevelManager levelManager = FindFirstObjectByType<LevelManager>();
+        if (levelManager != null)
+        {
+            levelManager.ResetProgress();
+            Debug.Log("Progress reset through LevelManager");
+        }
+        else
+        {
+            // Если LevelManager не найден, ищем RestartGame скрипт
+            RestartGame restartScript = FindFirstObjectByType<RestartGame>();
+            if (restartScript != null)
+            {
+                restartScript.ResetProgress();
+            }
+            else
+            {
+                // Прямой сброс
+                PlayerPrefs.DeleteKey("CurrentSegment");
+                PlayerPrefs.DeleteKey("GameFlags");
+                PlayerPrefs.Save();
+                Debug.Log("Progress reset directly from SettingsManager");
+            }
+        }
+        
+        // Закрываем настройки после сброса
+        CloseSettings();
+        
+        Debug.Log("Прогресс игры успешно сброшен! Уровень начнется с начала.");
+    }
+    
     public void RestartGame()
     {
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
@@ -758,13 +820,8 @@ public class SettingsManager : MonoBehaviour
     {
         Debug.Log("Returning to main menu...");
         
-        // Устанавливаем флаг для LevelSelectionManager
         LevelSelectionManager.comingFromSettings = true;
-        
-        // Сохраняем настройки перед выходом
         PlayerPrefs.Save();
-        
-        // Загружаем сцену главного меню (SampleScene)
         SceneManager.LoadScene("SampleScene");
     }
 }

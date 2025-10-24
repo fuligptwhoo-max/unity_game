@@ -25,7 +25,7 @@ public class LevelSelectionManager : MonoBehaviour
     [Header("Audio")]
     public AudioSource audioSource;
     
-    private int currentLevelIndex = -1;
+    private int currentLevelIndex = -1; // -1 означает, что ничего не выбрано
     private VideoPlayer videoPlayer;
     private RenderTexture renderTexture;
     
@@ -156,6 +156,13 @@ public class LevelSelectionManager : MonoBehaviour
     
     public void SelectLevel(int levelIndex)
     {
+        // ЕСЛИ НАЖИМАЕМ НА УЖЕ ВЫБРАННЫЙ УРОВЕНЬ - СНИМАЕМ ВЫБОР
+        if (currentLevelIndex == levelIndex)
+        {
+            DeselectLevel();
+            return;
+        }
+        
         if (levelIndex < 0 || levelIndex >= levels.Count) 
         {
             Debug.LogError($"Invalid level index: {levelIndex}");
@@ -201,6 +208,23 @@ public class LevelSelectionManager : MonoBehaviour
             levelDescriptionText.text = selectedLevel.levelDescription;
         }
         
+        UpdateLevelItemsVisual();
+    }
+    
+    // НОВЫЙ МЕТОД: Снятие выбора с уровня
+    public void DeselectLevel()
+    {
+        Debug.Log("Deselecting level");
+        
+        currentLevelIndex = -1;
+        
+        if (videoPlayer != null)
+            videoPlayer.Stop();
+            
+        if (audioSource != null)
+            audioSource.Stop();
+            
+        SetPreviewVisible(false);
         UpdateLevelItemsVisual();
     }
     

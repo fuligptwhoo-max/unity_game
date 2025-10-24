@@ -48,6 +48,10 @@ public class LevelManager : MonoBehaviour
     private bool isPaused = false;
     private bool usingPrimaryVideoPlayer = true;
     
+    // Ключи для сохранения
+    private const string CURRENT_SEGMENT_KEY = "CurrentSegment";
+    private const string GAME_FLAGS_KEY = "GameFlags";
+    
     [System.Serializable]
     public class SegmentData
     {
@@ -96,6 +100,10 @@ public class LevelManager : MonoBehaviour
     void Start()
     {
         Debug.Log("LevelManager: Initializing with dual VideoPlayer system");
+        
+        // ЗАГРУЖАЕМ СОХРАНЕНИЕ СРАЗУ ПРИ СТАРТЕ
+        LoadProgress();
+        
         InitializeLevel();
 
         List<VideoClip> videosToPreload = new List<VideoClip>();
@@ -122,6 +130,99 @@ public class LevelManager : MonoBehaviour
         }
 
         ApplyVolumeSettings();
+    }
+    
+    // УЛУЧШЕННЫЙ МЕТОД: Загрузка прогресса
+    private void LoadProgress()
+    {
+        if (PlayerPrefs.HasKey(CURRENT_SEGMENT_KEY))
+        {
+            currentSegmentIndex = PlayerPrefs.GetInt(CURRENT_SEGMENT_KEY, 0);
+            Debug.Log($"Loaded progress: segment {currentSegmentIndex}");
+        }
+        else
+        {
+            currentSegmentIndex = 0;
+            Debug.Log("No saved progress found, starting from segment 0");
+        }
+        
+        // Загружаем флаги игры
+        if (PlayerPrefs.HasKey(GAME_FLAGS_KEY))
+        {
+            string flagsJson = PlayerPrefs.GetString(GAME_FLAGS_KEY);
+            SerializableDictionary loadedFlags = JsonUtility.FromJson<SerializableDictionary>(flagsJson);
+            if (loadedFlags != null)
+            {
+                gameFlags = loadedFlags.ToDictionary();
+                Debug.Log($"Loaded {gameFlags.Count} game flags");
+            }
+        }
+        else
+        {
+            // Инициализируем базовые флаги если нет сохранений
+            gameFlags["hasApproachedDoor"] = false;
+            Debug.Log("Initialized default game flags");
+        }
+    }
+    
+    // УЛУЧШЕННЫЙ МЕТОД: Сохранение прогресса
+    public void SaveProgress()
+    {
+        PlayerPrefs.SetInt(CURRENT_SEGMENT_KEY, currentSegmentIndex);
+        
+        // Сохраняем флаги игры
+        SerializableDictionary flagsToSave = new SerializableDictionary(gameFlags);
+        string flagsJson = JsonUtility.ToJson(flagsToSave);
+        PlayerPrefs.SetString(GAME_FLAGS_KEY, flagsJson);
+        
+        PlayerPrefs.Save();
+        Debug.Log($"Progress saved: segment {currentSegmentIndex}, flags: {gameFlags.Count}");
+    }
+    
+    // НОВЫЙ МЕТОД: Сброс прогресса (для тестирования)
+    public void ResetProgress()
+    {
+        PlayerPrefs.DeleteKey(CURRENT_SEGMENT_KEY);
+        PlayerPrefs.DeleteKey(GAME_FLAGS_KEY);
+        PlayerPrefs.Save();
+        currentSegmentIndex = 0;
+        gameFlags.Clear();
+        gameFlags["hasApproachedDoor"] = false;
+        Debug.Log("Progress reset to beginning");
+    }
+    
+    // КЛАСС: Для сериализации Dictionary
+    [System.Serializable]
+    public class SerializableDictionary
+    {
+        [System.Serializable]
+        public class KeyValuePair
+        {
+            public string key;
+            public bool value;
+        }
+        
+        public List<KeyValuePair> items = new List<KeyValuePair>();
+        
+        public SerializableDictionary() { }
+        
+        public SerializableDictionary(Dictionary<string, bool> dictionary)
+        {
+            foreach (var kvp in dictionary)
+            {
+                items.Add(new KeyValuePair { key = kvp.Key, value = kvp.Value });
+            }
+        }
+        
+        public Dictionary<string, bool> ToDictionary()
+        {
+            Dictionary<string, bool> dict = new Dictionary<string, bool>();
+            foreach (var item in items)
+            {
+                dict[item.key] = item.value;
+            }
+            return dict;
+        }
     }
     
     private void ApplyVolumeSettings()
@@ -158,11 +259,59 @@ public class LevelManager : MonoBehaviour
             Debug.Log($"Video playing: {activeVideoPlayer.time:F2}/{activeVideoPlayer.length:F2}, Segment: {currentSegmentIndex}");
         }
         
+        // НОВАЯ ФУНКЦИЯ: Пропуск текущего сегмента по нажатию Space или правой кнопки мыши
+        if ((Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(1)) && activeVideoPlayer.isPlaying)
+        {
+            SkipCurrentSegment();
+        }
+        
+        // Тестирование: Сброс прогресса по F5
+        if (Input.GetKeyDown(KeyCode.F5))
+        {
+            ResetProgress();
+            Debug.Log("Progress reset (F5 pressed)");
+        }
+        
+        // Тестирование: Сохранение прогресса по F6
+        if (Input.GetKeyDown(KeyCode.F6))
+        {
+            SaveProgress();
+            Debug.Log("Progress manually saved (F6 pressed)");
+        }
+        
         // УБРАНА обработка ESC - теперь это делает только SettingsManager
         // Оставляем только F1 для открытия настроек в уровне
         if (Input.GetKeyDown(KeyCode.F1))
         {
             ToggleSettingsInLevel();
+        }
+    }
+    
+    // НОВЫЙ МЕТОД: Пропуск текущего сегмента
+    private void SkipCurrentSegment()
+    {
+        if (currentSegmentCoroutine != null)
+        {
+            StopCoroutine(currentSegmentCoroutine);
+            currentSegmentCoroutine = null;
+        }
+        
+        VideoPlayer activeVideoPlayer = usingPrimaryVideoPlayer ? primaryVideoPlayer : secondaryVideoPlayer;
+        activeVideoPlayer.Stop();
+        
+        // Переходим к следующему сегменту
+        SegmentData currentSegment = storySegments[currentSegmentIndex];
+        int nextSegment = GetNextSegmentIndex(currentSegment);
+        
+        if (nextSegment != -1)
+        {
+            Debug.Log($"Skipping to segment: {nextSegment}");
+            SwitchVideoPlayer();
+            PlaySegmentImmediately(nextSegment);
+        }
+        else
+        {
+            Debug.Log("No next segment available after skip");
         }
     }
     
@@ -182,15 +331,22 @@ public class LevelManager : MonoBehaviour
     
     public void StartLevelAfterLoading()
     {
-        Debug.Log("Starting level after loading");
+        Debug.Log($"Starting level after loading from segment: {currentSegmentIndex}");
         
-        if (storySegments.Count > 0 && storySegments[0].video != null)
+        // ПРОВЕРЯЕМ КОРРЕКТНОСТЬ СОХРАНЕННОГО СЕГМЕНТА
+        if (currentSegmentIndex < 0 || currentSegmentIndex >= storySegments.Count)
+        {
+            Debug.LogWarning($"Invalid saved segment index: {currentSegmentIndex}, resetting to 0");
+            currentSegmentIndex = 0;
+        }
+        
+        if (storySegments.Count > 0 && storySegments[currentSegmentIndex].video != null)
         {
             StartCoroutine(PrepareFirstVideo());
         }
         else
         {
-            PlaySegmentImmediately(0);
+            PlaySegmentImmediately(currentSegmentIndex);
         }
     }
     
@@ -199,14 +355,14 @@ public class LevelManager : MonoBehaviour
         Debug.Log("Preparing first video for immediate playback");
         
         VideoPlayer activeVideoPlayer = usingPrimaryVideoPlayer ? primaryVideoPlayer : secondaryVideoPlayer;
-        activeVideoPlayer.clip = storySegments[0].video;
-        activeVideoPlayer.isLooping = storySegments[0].isLooping;
+        activeVideoPlayer.clip = storySegments[currentSegmentIndex].video;
+        activeVideoPlayer.isLooping = storySegments[currentSegmentIndex].isLooping;
         
         activeVideoPlayer.Prepare();
         yield return new WaitUntil(() => activeVideoPlayer.isPrepared);
         
         Debug.Log("First video prepared, starting playback");
-        PlaySegmentImmediately(0);
+        PlaySegmentImmediately(currentSegmentIndex);
     }
     
     void InitializeLevel()
@@ -268,8 +424,6 @@ public class LevelManager : MonoBehaviour
             if (pauseButtons[i] != null)
                 pauseButtons[i].onClick.AddListener(() => OnPauseButtonClicked(index));
         }
-        
-        gameFlags["hasApproachedDoor"] = false;
     }
     
     void PlaySegmentImmediately(int segmentIndex)
@@ -392,6 +546,9 @@ public class LevelManager : MonoBehaviour
                 PlaySegmentImmediately(nextSegment);
             }
         }
+        
+        // СОХРАНЕНИЕ ПРОГРЕССА после каждого сегмента
+        SaveProgress();
     }
     
     IEnumerator PrepareNextVideoInBackground(VideoClip nextVideo, VideoPlayer targetPlayer)
@@ -553,6 +710,7 @@ public class LevelManager : MonoBehaviour
             if (!string.IsNullOrEmpty(clickedButton.setFlag))
             {
                 gameFlags[clickedButton.setFlag] = true;
+                SaveProgress(); // Сохраняем после изменения флагов
             }
         }
         
@@ -655,6 +813,7 @@ public class LevelManager : MonoBehaviour
             if (!string.IsNullOrEmpty(chosen.setFlag))
             {
                 gameFlags[chosen.setFlag] = true;
+                SaveProgress(); // Сохраняем после выбора
             }
             
             Debug.Log($"Transitioning to segment: {chosen.targetSegment}");
@@ -707,6 +866,9 @@ public class LevelManager : MonoBehaviour
     
     void OnDestroy()
     {
+        // СОХРАНЯЕМ ПРОГРЕСС ПРИ ВЫХОДЕ ИЗ УРОВНЯ
+        SaveProgress();
+        
         if (primaryVideoPlayer != null)
             primaryVideoPlayer.loopPointReached -= OnVideoFinished;
             
